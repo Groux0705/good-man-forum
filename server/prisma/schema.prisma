@@ -23,8 +23,8 @@ model User {
   replies   Reply[]
   votes     Vote[]
   notifications Notification[]
-  videos    Video[]
-  videoComments VideoComment[]
+  courses   Course[]
+  courseComments CourseComment[]
 
   @@map("users")
 }
@@ -108,16 +108,19 @@ model Notification {
   @@map("notifications")
 }
 
-model Video {
+model Course {
   id          String   @id @default(cuid())
   title       String
   description String?
-  thumbnail   String   // 视频缩略图
-  videoUrl    String   // 视频URL (YouTube, Bilibili等)
-  platform    String   // 平台类型 "youtube", "bilibili", "local"
-  category    String   // 视频分类 "relationship", "communication", "self-improvement"
+  thumbnail   String?  // 课程缩略图
+  type        String   // 课程类型 "video", "text"
+  content     String?  // 文字课程内容（Markdown格式）
+  videoUrl    String?  // 视频URL (仅视频课程)
+  platform    String?  // 平台类型 "youtube", "bilibili", "local" (仅视频课程)
+  category    String   // 课程分类 "relationship", "communication", "self-improvement"
   tags        String?  // 标签，用逗号分隔
-  duration    Int?     // 视频时长（秒）
+  duration    Int?     // 课程时长（秒，视频课程）或阅读时长（文字课程）
+  difficulty  String   @default("beginner") // 难度等级 "beginner", "intermediate", "advanced"
   views       Int      @default(0)  // 观看次数
   likes       Int      @default(0)  // 点赞数
   userId      String   // 上传者ID
@@ -126,21 +129,21 @@ model Video {
   updatedAt   DateTime @updatedAt
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comments    VideoComment[]
+  comments    CourseComment[]
 
-  @@map("videos")
+  @@map("courses")
 }
 
-model VideoComment {
+model CourseComment {
   id        String   @id @default(cuid())
   content   String
   userId    String
-  videoId   String
+  courseId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  @@map("video_comments")
+  @@map("course_comments")
 }

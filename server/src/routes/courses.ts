@@ -5,16 +5,20 @@ import { AuthRequest, authenticate } from '../middleware/auth';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// 获取视频列表
-const getVideos = async (req: express.Request, res: express.Response) => {
+// 获取课程列表
+const getCourses = async (req: express.Request, res: express.Response) => {
   try {
-    const { page = 1, limit = 12, category, search, sort = 'latest' } = req.query;
+    const { page = 1, limit = 12, category, search, sort = 'latest', type } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
     let where: any = { published: true };
     
     if (category && category !== 'all') {
       where.category = String(category);
+    }
+    
+    if (type && type !== 'all') {
+      where.type = String(type);
     }
     
     if (search) {
@@ -44,7 +48,7 @@ const getVideos = async (req: express.Request, res: express.Response) => {
         break;
     }
 
-    const videos = await prisma.video.findMany({
+    const courses = await prisma.course.findMany({
       where,
       skip,
       take: Number(limit),
@@ -59,12 +63,12 @@ const getVideos = async (req: express.Request, res: express.Response) => {
       }
     });
 
-    const total = await prisma.video.count({ where });
+    const total = await prisma.course.count({ where });
 
     res.json({
       success: true,
       data: {
-        videos,
+        courses,
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -74,7 +78,7 @@ const getVideos = async (req: express.Request, res: express.Response) => {
       }
     });
   } catch (error) {
-    console.error('Get videos error:', error);
+    console.error('Get courses error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -82,12 +86,12 @@ const getVideos = async (req: express.Request, res: express.Response) => {
   }
 };
 
-// 获取单个视频详情
-const getVideo = async (req: express.Request, res: express.Response) => {
+// 获取单个课程详情
+const getCourse = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
 
-    const video = await prisma.video.findUnique({
+    const course = await prisma.course.findUnique({
       where: { id },
       include: {
         user: {
@@ -104,25 +108,25 @@ const getVideo = async (req: express.Request, res: express.Response) => {
       }
     });
 
-    if (!video) {
+    if (!course) {
       return res.status(404).json({
         success: false,
-        error: 'Video not found'
+        error: 'Course not found'
       });
     }
 
     // 增加观看次数
-    await prisma.video.update({
+    await prisma.course.update({
       where: { id },
       data: { views: { increment: 1 } }
     });
 
     res.json({
       success: true,
-      data: video
+      data: course
     });
   } catch (error) {
-    console.error('Get video error:', error);
+    console.error('Get course error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -130,26 +134,65 @@ const getVideo = async (req: express.Request, res: express.Response) => {
   }
 };
 
-// 创建视频
-const createVideo = async (req: AuthRequest, res: express.Response) => {
+// 创建课程
+const createCourse = async (req: AuthRequest, res: express.Response) => {
   try {
-    const { title, description, thumbnail, videoUrl, platform, category, tags, duration } = req.body;
+    const { 
+      title, 
+      description, 
+      thumbnail, 
+      type, 
+      content, 
+      videoUrl, 
+      platform, 
+      category, 
+      tags, 
+      duration, 
+      difficulty = 'beginner' 
+    } = req.body;
     const userId = req.user!.id;
 
-    if (!title || !videoUrl || !platform || !category) {
+    if (!title || !type || !category) {
       return res.status(400).json({
         success: false,
-        error: 'Title, video URL, platform, and category are required'
+        error: 'Title, type, and category are required'
       });
     }
 
-    // 验证平台类型
-    const validPlatforms = ['youtube', 'bilibili', 'local'];
-    if (!validPlatforms.includes(platform)) {
+    // 验证课程类型
+    const validTypes = ['video', 'text'];
+    if (!validTypes.includes(type)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid platform'
+        error: 'Invalid course type'
       });
+    }
+
+    // 验证视频课程必需字段
+    if (type === 'video' && (!videoUrl || !platform)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Video URL and platform are required for video courses'
+      });
+    }
+
+    // 验证文字课程必需字段
+    if (type === 'text' && !content) {
+      return res.status(400).json({
+        success: false,
+        error: 'Content is required for text courses'
+      });
+    }
+
+    // 验证平台类型（仅视频课程）
+    if (type === 'video' && platform) {
+      const validPlatforms = ['youtube', 'bilibili', 'local'];
+      if (!validPlatforms.includes(platform)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid platform'
+        });
+      }
     }
 
     // 验证分类
@@ -161,16 +204,28 @@ const createVideo = async (req: AuthRequest, res: express.Response) => {
       });
     }
 
-    const video = await prisma.video.create({
+    // 验证难度等级
+    const validDifficulties = ['beginner', 'intermediate', 'advanced'];
+    if (!validDifficulties.includes(difficulty)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid difficulty level'
+      });
+    }
+
+    const course = await prisma.course.create({
       data: {
         title,
         description,
-        thumbnail: thumbnail || '',
-        videoUrl,
-        platform,
+        thumbnail,
+        type,
+        content: type === 'text' ? content : null,
+        videoUrl: type === 'video' ? videoUrl : null,
+        platform: type === 'video' ? platform : null,
         category,
         tags,
         duration: duration ? Number(duration) : null,
+        difficulty,
         userId,
         published: true
       },
@@ -183,10 +238,10 @@ const createVideo = async (req: AuthRequest, res: express.Response) => {
 
     res.status(201).json({
       success: true,
-      data: video
+      data: course
     });
   } catch (error) {
-    console.error('Create video error:', error);
+    console.error('Create course error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -194,8 +249,8 @@ const createVideo = async (req: AuthRequest, res: express.Response) => {
   }
 };
 
-// 添加视频评论
-const addVideoComment = async (req: AuthRequest, res: express.Response) => {
+// 添加课程评论
+const addCourseComment = async (req: AuthRequest, res: express.Response) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
@@ -208,20 +263,20 @@ const addVideoComment = async (req: AuthRequest, res: express.Response) => {
       });
     }
 
-    // 验证视频是否存在
-    const video = await prisma.video.findUnique({ where: { id } });
-    if (!video) {
+    // 验证课程是否存在
+    const course = await prisma.course.findUnique({ where: { id } });
+    if (!course) {
       return res.status(404).json({
         success: false,
-        error: 'Video not found'
+        error: 'Course not found'
       });
     }
 
-    const comment = await prisma.videoComment.create({
+    const comment = await prisma.courseComment.create({
       data: {
         content: content.trim(),
         userId,
-        videoId: id
+        courseId: id
       },
       include: {
         user: {
@@ -235,7 +290,7 @@ const addVideoComment = async (req: AuthRequest, res: express.Response) => {
       data: comment
     });
   } catch (error) {
-    console.error('Add video comment error:', error);
+    console.error('Add course comment error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -243,30 +298,30 @@ const addVideoComment = async (req: AuthRequest, res: express.Response) => {
   }
 };
 
-// 点赞视频
-const likeVideo = async (req: AuthRequest, res: express.Response) => {
+// 点赞课程
+const likeCourse = async (req: AuthRequest, res: express.Response) => {
   try {
     const { id } = req.params;
 
-    const video = await prisma.video.findUnique({ where: { id } });
-    if (!video) {
+    const course = await prisma.course.findUnique({ where: { id } });
+    if (!course) {
       return res.status(404).json({
         success: false,
-        error: 'Video not found'
+        error: 'Course not found'
       });
     }
 
-    const updatedVideo = await prisma.video.update({
+    const updatedCourse = await prisma.course.update({
       where: { id },
       data: { likes: { increment: 1 } }
     });
 
     res.json({
       success: true,
-      data: { likes: updatedVideo.likes }
+      data: { likes: updatedCourse.likes }
     });
   } catch (error) {
-    console.error('Like video error:', error);
+    console.error('Like course error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -275,10 +330,10 @@ const likeVideo = async (req: AuthRequest, res: express.Response) => {
 };
 
 // 路由定义
-router.get('/', getVideos);
-router.get('/:id', getVideo);
-router.post('/', authenticate, createVideo);
-router.post('/:id/comments', authenticate, addVideoComment);
-router.post('/:id/like', authenticate, likeVideo);
+router.get('/', getCourses);
+router.get('/:id', getCourse);
+router.post('/', authenticate, createCourse);
+router.post('/:id/comments', authenticate, addCourseComment);
+router.post('/:id/like', authenticate, likeCourse);
 
 export default router;

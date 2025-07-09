@@ -9,9 +9,9 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
   ({ className, variant = 'default', ...props }, ref) => {
     const variants = {
       default: "border-transparent theme-bg-primary text-white hover:opacity-80",
-      secondary: "border-transparent theme-surface theme-text hover:opacity-80",
+      secondary: "border-transparent bg-secondary text-secondary-foreground hover:opacity-80",
       destructive: "border-transparent bg-red-500 text-white hover:bg-red-600",
-      outline: "theme-text theme-border",
+      outline: "text-foreground border-border",
       success: "border-transparent bg-green-500 text-white hover:bg-green-600",
     };
 

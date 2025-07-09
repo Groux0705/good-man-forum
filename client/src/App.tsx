@@ -15,8 +15,8 @@ import NodeDetail from './pages/NodeDetail';
 import SearchResults from './pages/SearchResults';
 import UserSettings from './pages/UserSettings';
 import UserProfile from './pages/UserProfile';
-import Videos from './pages/Videos';
-import VideoDetail from './pages/VideoDetail';
+import Courses from './pages/Courses';
+import CourseDetail from './pages/CourseDetail';
 import './styles/theme.css';
 import './index.css';
 
@@ -49,8 +49,8 @@ function App() {
                   <Route path="/search" element={<SearchResults />} />
                   <Route path="/settings" element={<UserSettings />} />
                   <Route path="/user/:id" element={<UserProfile />} />
-                  <Route path="/videos" element={<Videos />} />
-                  <Route path="/video/:id" element={<VideoDetail />} />
+                  <Route path="/courses" element={<Courses />} />
+                  <Route path="/course/:id" element={<CourseDetail />} />
                 </Routes>
               </main>
               <Toaster 

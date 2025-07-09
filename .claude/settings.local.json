@@ -16,7 +16,13 @@
       "Bash(npx prisma:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "WebFetch(domain:openbuild.xyz)",
+      "Bash(node:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

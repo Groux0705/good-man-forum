@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, LogOut, Home, Layers, Settings, User, ChevronDown, Play } from 'lucide-react';
+import { Plus, LogOut, Home, Layers, Settings, User, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
@@ -30,9 +30,9 @@ const Header: React.FC = () => {
               </Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/videos" className="flex items-center space-x-2 theme-hover">
-                <Play className="h-4 w-4" />
-                <span>视频课程</span>
+              <Link to="/courses" className="flex items-center space-x-2 theme-hover">
+                <BookOpen className="h-4 w-4" />
+                <span>课程</span>
               </Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>

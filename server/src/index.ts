@@ -11,7 +11,7 @@ import nodeRoutes from './routes/nodes';
 import topicRoutes from './routes/topics';
 import replyRoutes from './routes/replies';
 import uploadRoutes from './routes/upload';
-import videoRoutes from './routes/videos';
+import courseRoutes from './routes/courses';
 
 dotenv.config();
 
@@ -45,7 +45,7 @@ app.use('/api/nodes', nodeRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/replies', replyRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/videos', videoRoutes);
+app.use('/api/courses', courseRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
