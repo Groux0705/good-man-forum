@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "WebFetch(domain:21st.dev)",
+      "WebFetch(domain:reactbits.dev)",
+      "WebFetch(domain:tweakcn.com)",
+      "WebFetch(domain:pro.magicui.design)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": []
+  }
+}
