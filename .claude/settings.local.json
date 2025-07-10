@@ -22,7 +22,10 @@
       "Bash(mv:*)",
       "Bash(cp:*)",
       "Bash(ls:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(cd /Users/mac/dev/good-man-forum/client)",
+      "Bash(grep -n \"return (\" src/pages/CourseDetail.tsx)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

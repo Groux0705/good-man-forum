@@ -5,6 +5,9 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { CourseCardSkeleton } from '../components/ui/Skeleton';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import PageTransition from '../components/ui/PageTransition';
 
 interface Course {
   id: string;
@@ -49,7 +52,8 @@ const Courses: React.FC = () => {
   const type = searchParams.get('type') || 'all';
   
   const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // 初始为true，确保显示骨架屏
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [pagination, setPagination] = useState({
@@ -81,9 +85,13 @@ const Courses: React.FC = () => {
     { id: 'likes', name: '点赞数', icon: Heart }
   ];
 
-  const fetchCourses = async (page = 1) => {
+  const fetchCourses = async (page = 1, showSkeleton = true) => {
     try {
-      setLoading(true);
+      if (showSkeleton) {
+        setLoading(true);
+        setCourses([]);
+      }
+      
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '12',
@@ -94,20 +102,32 @@ const Courses: React.FC = () => {
       });
       
       const response = await fetch(`/api/courses?${params}`);
+      
       if (response.ok) {
         const data = await response.json();
-        setCourses(data.data.courses);
+        setCourses(data.data.courses || []); // 确保总是数组
         setPagination(data.data.pagination);
+      } else {
+        setCourses([]); // 失败时设置为空数组
       }
     } catch (error) {
       console.error('Failed to fetch courses:', error);
+      setCourses([]); // 错误时设置为空数组
     } finally {
       setLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
   useEffect(() => {
-    fetchCourses(1);
+    // 立即设置loading状态，防止任何闪烁
+    setLoading(true);
+    setCourses([]);
+    
+    // 使用微任务确保状态更新立即生效
+    Promise.resolve().then(() => {
+      fetchCourses(1, false);
+    });
   }, [category, type, sortBy, searchTerm]);
 
   const handleCategoryChange = (newCategory: string) => {
@@ -139,7 +159,9 @@ const Courses: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchCourses(1);
+    setLoading(true);
+    setCourses([]);
+    fetchCourses(1, false);
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -188,97 +210,141 @@ const Courses: React.FC = () => {
     }
   };
 
+  // 当loading时，完全不渲染任何动态内容，只显示骨架屏
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-48"></div>
-            <div className="flex space-x-2">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-8 bg-muted rounded w-20"></div>
-              ))}
+      <PageTransition>
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-7xl mx-auto">
+            {/* 页面标题骨架 */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
+              <div className="mb-6 lg:mb-0">
+                <div className="h-10 bg-muted rounded w-48 mb-3 skeleton"></div>
+                <div className="h-5 bg-muted rounded w-96 mb-4 skeleton"></div>
+                <div className="flex items-center space-x-4">
+                  <div className="h-4 bg-muted rounded w-16 skeleton"></div>
+                  <div className="h-4 bg-muted rounded w-20 skeleton"></div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="h-10 bg-muted rounded w-64 skeleton"></div>
+                <div className="flex space-x-2">
+                  <div className="h-8 w-8 bg-muted rounded skeleton"></div>
+                  <div className="h-8 w-8 bg-muted rounded skeleton"></div>
+                </div>
+              </div>
             </div>
+
+            {/* 筛选工具栏骨架 */}
+            <div className="mb-8">
+              <div className="mb-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-4 bg-muted rounded w-8 skeleton"></div>
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="h-8 bg-muted rounded w-20 skeleton"></div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center space-x-2">
+                  <div className="h-4 bg-muted rounded w-8 skeleton"></div>
+                  <div className="flex space-x-1">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-8 bg-muted rounded w-24 skeleton"></div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="h-4 bg-muted rounded w-8 skeleton"></div>
+                  <div className="flex space-x-1">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="h-8 bg-muted rounded w-20 skeleton"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 课程卡片骨架 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {[...Array(12)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="aspect-video bg-muted rounded-lg mb-3"></div>
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </div>
+                <CourseCardSkeleton key={i} viewMode="grid" />
               ))}
             </div>
           </div>
         </div>
-      </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-7xl mx-auto">
-        {/* 页面标题和搜索 */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
-          <div className="mb-6 lg:mb-0">
-            <h1 className="text-4xl font-bold text-foreground mb-3">课程中心</h1>
-            <p className="text-lg text-muted-foreground">
-              专业的男性情感成长课程内容，涵盖视频和文字多种形式，助你提升魅力和沟通技巧
-            </p>
-            <div className="flex items-center space-x-4 mt-4 text-sm text-muted-foreground">
-              <span className="flex items-center">
-                <BookOpen className="h-4 w-4 mr-1" />
-                {pagination.total || 0} 个课程
-              </span>
-              <span className="flex items-center">
-                <Eye className="h-4 w-4 mr-1" />
-                累计学习 {courses.reduce((acc, c) => acc + c.views, 0).toLocaleString()}
-              </span>
-            </div>
-          </div>
-          
-          {/* 搜索和视图切换 */}
-          <div className="flex items-center space-x-4">
-            <form onSubmit={handleSearch} className="flex">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="搜索课程..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-64 bg-background border-border"
-                />
+    <PageTransition>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* 页面标题和搜索 */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
+            <div className="mb-6 lg:mb-0">
+              <h1 className="text-4xl font-bold text-foreground mb-3">课程中心</h1>
+              <p className="text-lg text-muted-foreground">
+                专业的男性情感成长课程内容，涵盖视频和文字多种形式，助你提升魅力和沟通技巧
+              </p>
+              <div className="flex items-center space-x-4 mt-4 text-sm text-muted-foreground">
+                <span className="flex items-center">
+                  <BookOpen className="h-4 w-4 mr-1" />
+                  {pagination.total || 0} 个课程
+                </span>
+                <span className="flex items-center">
+                  <Eye className="h-4 w-4 mr-1" />
+                  累计学习 {courses.reduce((acc, c) => acc + c.views, 0).toLocaleString()}
+                </span>
               </div>
-              <Button type="submit" variant="outline" size="sm" className="ml-2">
-                搜索
-              </Button>
-            </form>
+            </div>
             
-            <div className="flex items-center space-x-2">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
+            {/* 搜索和视图切换 */}
+            <div className="flex items-center space-x-4">
+              <form onSubmit={handleSearch} className="flex">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="搜索课程..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 w-64 bg-background border-border"
+                  />
+                </div>
+                <Button type="submit" variant="outline" size="sm" className="ml-2">
+                  搜索
+                </Button>
+              </form>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="transition-all duration-200"
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="transition-all duration-200"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
         {/* 筛选和排序 */}
         <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
-            {/* 分类筛选 */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-muted-foreground mr-2 py-2">分类:</span>
+          {/* 分类筛选 - 单独一行 */}
+          <div className="mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground mr-2">分类:</span>
               {categories.map((cat) => {
                 const IconComponent = cat.icon;
                 return (
@@ -287,7 +353,7 @@ const Courses: React.FC = () => {
                     variant={category === cat.id ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleCategoryChange(cat.id)}
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-2 transition-all duration-200 hover:scale-105"
                   >
                     <IconComponent className="h-3 w-3" />
                     <span>{cat.name}</span>
@@ -295,7 +361,10 @@ const Courses: React.FC = () => {
                 );
               })}
             </div>
-            
+          </div>
+          
+          {/* 类型和排序 - 同一行 */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* 类型筛选 */}
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium text-muted-foreground">类型:</span>
@@ -308,7 +377,7 @@ const Courses: React.FC = () => {
                       variant={type === option.id ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleTypeChange(option.id)}
-                      className="flex items-center space-x-1"
+                      className="flex items-center space-x-1 transition-all duration-200 hover:scale-105"
                     >
                       <IconComponent className="h-3 w-3" />
                       <span>{option.name}</span>
@@ -330,7 +399,7 @@ const Courses: React.FC = () => {
                       variant={sortBy === option.id ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleSortChange(option.id)}
-                      className="flex items-center space-x-1"
+                      className="flex items-center space-x-1 transition-all duration-200 hover:scale-105"
                     >
                       <IconComponent className="h-3 w-3" />
                       <span>{option.name}</span>
@@ -344,17 +413,18 @@ const Courses: React.FC = () => {
 
         {/* 课程网格/列表 */}
         {courses.length > 0 ? (
-          <>
+          <div>
             <div className={`${viewMode === 'grid' 
               ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
               : 'space-y-4'
             } mb-8`}>
-              {courses.map((course) => {
+              {courses.map((course, index) => {
                 const TypeIcon = getCourseTypeIcon(course);
                 return (
                   <Link key={course.id} to={`/course/${course.id}`}>
-                    {viewMode === 'grid' ? (
-                      <Card className="glass-card group cursor-pointer hover:shadow-lg transition-all duration-300">
+                    <div>
+                      {viewMode === 'grid' ? (
+                        <Card className="glass-card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1">
                         <CardContent className="p-0">
                           {/* 课程缩略图 */}
                           <div className="relative aspect-video rounded-t-lg overflow-hidden">
@@ -557,6 +627,7 @@ const Courses: React.FC = () => {
                         </CardContent>
                       </Card>
                     )}
+                    </div>
                   </Link>
                 );
               })}
@@ -571,8 +642,8 @@ const Courses: React.FC = () => {
                       key={i + 1}
                       variant={pagination.page === i + 1 ? "default" : "outline"}
                       size="sm"
-                      onClick={() => fetchCourses(i + 1)}
-                      className="min-w-[40px]"
+                      onClick={() => fetchCourses(i + 1, false)} // 分页不显示骨架屏
+                      className="min-w-[40px] transition-all duration-200 hover:scale-105"
                     >
                       {i + 1}
                     </Button>
@@ -580,7 +651,7 @@ const Courses: React.FC = () => {
                 </div>
               </div>
             )}
-          </>
+          </div>
         ) : (
           <div className="text-center py-12">
             <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -595,6 +666,7 @@ const Courses: React.FC = () => {
         )}
       </div>
     </div>
+  </PageTransition>
   );
 };
 

@@ -8,6 +8,9 @@ import { Textarea } from '../components/ui/Textarea';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
+import { CourseDetailSkeleton } from '../components/ui/Skeleton';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import PageTransition from '../components/ui/PageTransition';
 
 interface CourseComment {
   id: string;
@@ -50,13 +53,19 @@ const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [course, setCourse] = useState<CourseDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // 初始必须为true
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
   useEffect(() => {
     if (id) {
-      fetchCourse();
+      // 立即设置loading，防止闪烁
+      setLoading(true);
+      
+      // 使用微任务确保状态更新立即生效
+      Promise.resolve().then(() => {
+        fetchCourse();
+      });
     }
   }, [id]);
 
@@ -203,314 +212,315 @@ const CourseDetail: React.FC = () => {
       const videoId = videoUrl.split('v=')[1]?.split('&')[0];
       return `https://www.youtube.com/embed/${videoId}`;
     } else if (platform === 'bilibili') {
-      // Bilibili 嵌入处理（需要根据实际URL格式调整）
       const bvid = videoUrl.match(/BV[A-Za-z0-9]+/)?.[0];
       return `https://player.bilibili.com/player.html?bvid=${bvid}`;
     }
     return videoUrl;
   };
 
+  // 当loading时，完全显示骨架屏，不渲染任何动态内容
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-32 mb-6"></div>
-            <div className="aspect-video bg-muted rounded-lg mb-6"></div>
-            <div className="h-8 bg-muted rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-muted rounded w-1/2"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <CourseDetailSkeleton />;
   }
 
   if (!course) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">课程不存在</h1>
-          <p className="text-muted-foreground mb-6">您要查看的课程可能已被删除或不存在。</p>
-          <Button asChild>
-            <Link to="/courses">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              返回课程列表
-            </Link>
-          </Button>
+      <PageTransition>
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-4">课程不存在</h1>
+            <p className="text-muted-foreground mb-6">您要查看的课程可能已被删除或不存在。</p>
+            <Button asChild>
+              <Link to="/courses">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                返回课程列表
+              </Link>
+            </Button>
+          </div>
         </div>
-      </div>
+      </PageTransition>
     );
   }
 
   const TypeIcon = getCourseTypeIcon();
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* 返回按钮 */}
-        <div className="mb-6">
-          <Button variant="ghost" asChild>
-            <Link to="/courses" className="flex items-center space-x-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>返回课程列表</span>
-            </Link>
-          </Button>
-        </div>
+    <PageTransition>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* 返回按钮 */}
+          <div className="mb-6 animate-slide-up">
+            <Button variant="ghost" asChild>
+              <Link to="/courses" className="flex items-center space-x-2 transition-all duration-200 hover:scale-105">
+                <ArrowLeft className="h-4 w-4" />
+                <span>返回课程列表</span>
+              </Link>
+            </Button>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 主要内容区域 */}
-          <div className="lg:col-span-2">
-            {/* 课程媒体内容 */}
-            <Card className="glass-card mb-6">
-              <CardContent className="p-0">
-                {course.type === 'video' && course.videoUrl ? (
-                  <div className="aspect-video rounded-lg overflow-hidden">
-                    <iframe
-                      src={getEmbedUrl(course.videoUrl, course.platform || 'youtube')}
-                      title={course.title}
-                      className="w-full h-full"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                ) : (
-                  <div className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
-                    <div className="text-center">
-                      <BookOpen className="h-16 w-16 text-primary mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-foreground mb-2">文字课程</h3>
-                      <p className="text-muted-foreground">请向下滚动查看课程内容</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* 主要内容区域 */}
+            <div className="lg:col-span-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+              {/* 课程媒体内容 */}
+              <Card className="glass-card mb-6 transition-all duration-300 hover:shadow-lg">
+                <CardContent className="p-0">
+                  {course.type === 'video' && course.videoUrl ? (
+                    <div className="aspect-video rounded-lg overflow-hidden">
+                      <iframe
+                        src={getEmbedUrl(course.videoUrl, course.platform || 'youtube')}
+                        title={course.title}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <div className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                      <div className="text-center">
+                        <BookOpen className="h-16 w-16 text-primary mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-foreground mb-2">文字课程</h3>
+                        <p className="text-muted-foreground">请向下滚动查看课程内容</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* 课程信息 */}
-            <Card className="glass-card mb-6">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
-                      {course.title}
-                    </h1>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-4">
-                      <div className="flex items-center space-x-1">
-                        <Eye className="h-4 w-4" />
-                        <span>{formatViews(course.views)} 学习</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{new Date(course.createdAt).toLocaleDateString()}</span>
-                      </div>
-                      {course.duration && (
+              {/* 课程信息 */}
+              <Card className="glass-card mb-6 transition-all duration-300 hover:shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
+                        {course.title}
+                      </h1>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-4">
                         <div className="flex items-center space-x-1">
-                          <TypeIcon className="h-4 w-4" />
-                          <span>{formatDuration(course.duration)}</span>
+                          <Eye className="h-4 w-4" />
+                          <span>{formatViews(course.views)} 学习</span>
                         </div>
-                      )}
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{new Date(course.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        {course.duration && (
+                          <div className="flex items-center space-x-1">
+                            <TypeIcon className="h-4 w-4" />
+                            <span>{formatDuration(course.duration)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* 操作按钮 */}
-                <div className="flex items-center space-x-3 mb-6">
-                  <Button onClick={handleLike} className="flex items-center space-x-2">
-                    <Heart className="h-4 w-4" />
-                    <span>{course.likes}</span>
-                  </Button>
-                  <Button variant="outline" className="flex items-center space-x-2">
-                    <Share2 className="h-4 w-4" />
-                    <span>分享</span>
-                  </Button>
-                </div>
-
-                {/* 课程描述 */}
-                {course.description && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-foreground mb-3">课程简介</h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {course.description}
-                    </p>
+                  {/* 操作按钮 */}
+                  <div className="flex items-center space-x-3 mb-6">
+                    <Button onClick={handleLike} className="flex items-center space-x-2 transition-all duration-200 hover:scale-105">
+                      <Heart className="h-4 w-4" />
+                      <span>{course.likes}</span>
+                    </Button>
+                    <Button variant="outline" className="flex items-center space-x-2 transition-all duration-200 hover:scale-105">
+                      <Share2 className="h-4 w-4" />
+                      <span>分享</span>
+                    </Button>
                   </div>
-                )}
 
-                {/* 标签 */}
-                {course.tags && (
-                  <div className="flex flex-wrap gap-2">
-                    {course.tags.split(',').map((tag, index) => (
-                      <Badge key={index} variant="outline">
-                        {tag.trim()}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {/* 课程描述 */}
+                  {course.description && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-3">课程简介</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {course.description}
+                      </p>
+                    </div>
+                  )}
 
-            {/* 文字课程内容 */}
-            {course.type === 'text' && course.content && (
-              <Card className="glass-card mb-6">
+                  {/* 标签 */}
+                  {course.tags && (
+                    <div className="flex flex-wrap gap-2">
+                      {course.tags.split(',').map((tag, index) => (
+                        <Badge key={index} variant="outline">
+                          {tag.trim()}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 文字课程内容 */}
+              {course.type === 'text' && course.content && (
+                <Card className="glass-card mb-6 transition-all duration-300 hover:shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <BookOpen className="h-5 w-5" />
+                      <span>课程内容</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
+                      <ReactMarkdown>{course.content}</ReactMarkdown>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 评论区 */}
+              <Card className="glass-card transition-all duration-300 hover:shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <BookOpen className="h-5 w-5" />
-                    <span>课程内容</span>
+                    <MessageSquare className="h-5 w-5" />
+                    <span>评论 ({course.comments.length})</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose prose-lg dark:prose-invert max-w-none">
-                    <ReactMarkdown>{course.content}</ReactMarkdown>
+                  {/* 发表评论 */}
+                  <form onSubmit={handleSubmitComment} className="mb-6">
+                    <Textarea
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder={user ? "写下你的想法..." : "请先登录后再评论"}
+                      disabled={!user || submittingComment}
+                      className="mb-3"
+                      rows={4}
+                    />
+                    <div className="flex justify-end">
+                      <Button 
+                        type="submit" 
+                        disabled={!user || !comment.trim() || submittingComment}
+                        className="transition-all duration-200 hover:scale-105"
+                      >
+                        {submittingComment ? (
+                          <>
+                            <LoadingSpinner size="sm" className="mr-2" />
+                            发表中...
+                          </>
+                        ) : (
+                          '发表评论'
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+
+                  {/* 评论列表 */}
+                  <div className="space-y-4">
+                    {course.comments.map((comment) => (
+                      <div key={comment.id} className="flex space-x-3 p-4 bg-muted/50 rounded-lg transition-all duration-200 hover:bg-muted/70">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          {comment.user.avatar ? (
+                            <img 
+                              src={comment.user.avatar} 
+                              alt={comment.user.username}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <User className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-medium text-foreground">{comment.user.username}</span>
+                            <Badge variant="outline" className="text-xs">
+                              Lv.{comment.user.level}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground">{comment.content}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {course.comments.length === 0 && (
+                      <div className="text-center py-8">
+                        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3 animate-pulse-soft" />
+                        <p className="text-muted-foreground">还没有评论，来发表第一个评论吧！</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </div>
 
-            {/* 评论区 */}
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <span>评论 ({course.comments.length})</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* 发表评论 */}
-                <form onSubmit={handleSubmitComment} className="mb-6">
-                  <Textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder={user ? "写下你的想法..." : "请先登录后再评论"}
-                    disabled={!user || submittingComment}
-                    className="mb-3"
-                    rows={4}
-                  />
-                  <div className="flex justify-end">
-                    <Button 
-                      type="submit" 
-                      disabled={!user || !comment.trim() || submittingComment}
-                    >
-                      {submittingComment ? '发表中...' : '发表评论'}
-                    </Button>
-                  </div>
-                </form>
-
-                {/* 评论列表 */}
-                <div className="space-y-4">
-                  {course.comments.map((comment) => (
-                    <div key={comment.id} className="flex space-x-3 p-4 bg-muted/50 rounded-lg">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        {comment.user.avatar ? (
-                          <img 
-                            src={comment.user.avatar} 
-                            alt={comment.user.username}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <User className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="font-medium text-foreground">{comment.user.username}</span>
-                          <Badge variant="outline" className="text-xs">
-                            Lv.{comment.user.level}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(comment.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground">{comment.content}</p>
-                      </div>
+            {/* 侧边栏 */}
+            <div className="lg:col-span-1 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              {/* 创作者信息 */}
+              <Card className="glass-card mb-6 transition-all duration-300 hover:shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      {course.user.avatar ? (
+                        <img 
+                          src={course.user.avatar} 
+                          alt={course.user.username}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-6 w-6 text-primary" />
+                      )}
                     </div>
-                  ))}
-
-                  {course.comments.length === 0 && (
-                    <div className="text-center py-8">
-                      <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-muted-foreground">还没有评论，来发表第一个评论吧！</p>
+                    <div>
+                      <h3 className="font-semibold text-foreground">{course.user.username}</h3>
+                      <p className="text-sm text-muted-foreground">Lv.{course.user.level} 讲师</p>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  </div>
+                  <Button className="w-full transition-all duration-200 hover:scale-105">关注讲师</Button>
+                </CardContent>
+              </Card>
 
-          {/* 侧边栏 */}
-          <div className="lg:col-span-1">
-            {/* 创作者信息 */}
-            <Card className="glass-card mb-6">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    {course.user.avatar ? (
-                      <img 
-                        src={course.user.avatar} 
-                        alt={course.user.username}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-6 w-6 text-primary" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{course.user.username}</h3>
-                    <p className="text-sm text-muted-foreground">Lv.{course.user.level} 讲师</p>
-                  </div>
-                </div>
-                <Button className="w-full">关注讲师</Button>
-              </CardContent>
-            </Card>
-
-            {/* 课程信息 */}
-            <Card className="glass-card">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-foreground mb-4">课程信息</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">类型</span>
-                    <Badge variant="outline">
-                      {course.type === 'video' ? '视频课程' : '文字课程'}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">分类</span>
-                    <Badge variant="outline">{getCategoryName(course.category)}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">难度</span>
-                    <Badge className={`text-white ${getDifficultyColor(course.difficulty)}`}>
-                      {getDifficultyName(course.difficulty)}
-                    </Badge>
-                  </div>
-                  {course.type === 'video' && course.platform && (
+              {/* 课程信息 */}
+              <Card className="glass-card transition-all duration-300 hover:shadow-lg">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-foreground mb-4">课程信息</h3>
+                  <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">平台</span>
-                      <Badge variant="secondary">
-                        {course.platform === 'youtube' ? 'YouTube' : 
-                         course.platform === 'bilibili' ? 'Bilibili' : 
-                         '本地视频'}
+                      <span className="text-muted-foreground">类型</span>
+                      <Badge variant="outline">
+                        {course.type === 'video' ? '视频课程' : '文字课程'}
                       </Badge>
                     </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">学习人数</span>
-                    <span className="font-medium">{formatViews(course.views)}</span>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">分类</span>
+                      <Badge variant="outline">{getCategoryName(course.category)}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">难度</span>
+                      <Badge className={`text-white ${getDifficultyColor(course.difficulty)}`}>
+                        {getDifficultyName(course.difficulty)}
+                      </Badge>
+                    </div>
+                    {course.type === 'video' && course.platform && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">平台</span>
+                        <Badge variant="secondary">
+                          {course.platform === 'youtube' ? 'YouTube' : 
+                           course.platform === 'bilibili' ? 'Bilibili' : 
+                           '本地视频'}
+                        </Badge>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">学习人数</span>
+                      <span className="font-medium">{formatViews(course.views)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">点赞数</span>
+                      <span className="font-medium">{course.likes}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">评论数</span>
+                      <span className="font-medium">{course.comments.length}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">点赞数</span>
-                    <span className="font-medium">{course.likes}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">评论数</span>
-                    <span className="font-medium">{course.comments.length}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 
