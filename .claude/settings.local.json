@@ -25,7 +25,9 @@
       "Bash(npx tsc:*)",
       "Bash(cd /Users/mac/dev/good-man-forum/client)",
       "Bash(grep -n \"return (\" src/pages/CourseDetail.tsx)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(npm start)",
+      "Bash(./test-course-features.sh:*)"
     ],
     "deny": []
   }

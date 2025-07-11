@@ -23,7 +23,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({ className = '' }) => {
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<number>();
 
   useEffect(() => {
     const savedSearches = localStorage.getItem('recentSearches');

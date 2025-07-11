@@ -26,6 +26,7 @@ model User {
   courses   Course[]
   courseComments CourseComment[]
   enrollments CourseEnrollment[]  // 新增：用户课程报名关系
+  lessonProgress LessonProgress[]  // 新增：用户学习进度
 
   @@map("users")
 }
@@ -249,6 +250,7 @@ model LessonProgress {
   lastWatchedAt DateTime @default(now())
   
   // 关联关系
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson      CourseLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   
   @@unique([userId, lessonId])

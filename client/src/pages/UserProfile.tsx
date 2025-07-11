@@ -277,10 +277,10 @@ const UserProfile: React.FC = () => {
                       <div className="text-sm text-muted-foreground">
                         回复了主题：
                         <Link
-                          to={`/topic/${reply.topic?.id}`}
+                          to={`/topic/${reply.topicId}`}
                           className="ml-1 text-foreground hover:text-primary transition-colors font-medium"
                         >
-                          {reply.topic?.title}
+                          {reply.topicId}
                         </Link>
                       </div>
                       <div className="text-foreground leading-relaxed">

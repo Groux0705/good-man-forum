@@ -65,7 +65,12 @@ const getCourses = async (req: express.Request, res: express.Response) => {
     res.json({
       success: true,
       data: {
-        courses,
+        courses: courses.map(course => ({
+          ...course,
+          enrollments: course._count.enrollmentList, // 统一使用实际的报名数量
+          chaptersCount: course._count.chapters,
+          commentsCount: course._count.comments
+        })),
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -130,9 +135,23 @@ const getCourse = async (req: express.Request, res: express.Response) => {
       data: { views: { increment: 1 } }
     });
 
+    // 计算课程总时长
+    const totalDuration = course.chapters.reduce((sum, chapter) => {
+      return sum + chapter.lessons.reduce((chapterSum, lesson) => {
+        return chapterSum + (lesson.duration || 0);
+      }, 0);
+    }, 0);
+
     res.json({
       success: true,
-      data: course
+      data: {
+        ...course,
+        totalDuration,
+        chaptersCount: course.chapters.length,
+        lessonsCount: course.chapters.reduce((sum, chapter) => sum + chapter.lessons.length, 0),
+        enrollments: course.enrollmentList.length, // 使用实际的报名数量
+        commentsCount: course.comments.length
+      }
     });
   } catch (error) {
     console.error('Get course error:', error);
@@ -390,9 +409,39 @@ const getLesson = async (req: express.Request, res: express.Response) => {
       data: { views: { increment: 1 } }
     });
 
+    // 获取章节中的所有课程以便导航
+    const chapterLessons = await prisma.courseLesson.findMany({
+      where: { chapterId: lesson.chapterId },
+      orderBy: { order: 'asc' },
+      select: { id: true, title: true, order: true }
+    });
+
+    // 获取课程的所有章节和课程信息
+    const allChapters = await prisma.courseChapter.findMany({
+      where: { courseId: lesson.chapter.course.id },
+      orderBy: { order: 'asc' },
+      include: {
+        lessons: {
+          orderBy: { order: 'asc' },
+          select: { id: true, title: true, order: true }
+        }
+      }
+    });
+
     res.json({
       success: true,
-      data: lesson
+      data: {
+        ...lesson,
+        chapterLessons,
+        allChapters,
+        navigation: {
+          courseId: lesson.chapter.course.id,
+          courseTitle: lesson.chapter.course.title,
+          chapterId: lesson.chapterId,
+          chapterTitle: lesson.chapter.title,
+          chapterOrder: lesson.chapter.order
+        }
+      }
     });
   } catch (error) {
     console.error('Get lesson error:', error);
@@ -403,13 +452,172 @@ const getLesson = async (req: express.Request, res: express.Response) => {
   }
 };
 
+// 获取用户课程进度
+const getCourseProgress = async (req: AuthRequest, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    // 检查用户是否已报名
+    const enrollment = await prisma.courseEnrollment.findUnique({
+      where: {
+        userId_courseId: { userId, courseId: id }
+      }
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Not enrolled in this course'
+      });
+    }
+
+    // 获取课程的所有小节
+    const course = await prisma.course.findUnique({
+      where: { id },
+      include: {
+        chapters: {
+          orderBy: { order: 'asc' },
+          include: {
+            lessons: {
+              orderBy: { order: 'asc' },
+              select: { id: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+    }
+
+    // 获取用户的学习进度
+    const userProgress = await prisma.lessonProgress.findMany({
+      where: {
+        userId,
+        lesson: {
+          chapter: {
+            courseId: id
+          }
+        }
+      },
+      include: {
+        lesson: {
+          select: { id: true, chapterId: true }
+        }
+      }
+    });
+
+    // 计算总体进度
+    const totalLessons = course.chapters.reduce((sum, chapter) => sum + chapter.lessons.length, 0);
+    const completedLessons = userProgress.filter(p => p.completed).length;
+    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+    // 更新报名记录中的进度
+    await prisma.courseEnrollment.update({
+      where: { id: enrollment.id },
+      data: { progress: progressPercentage }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalLessons,
+        completedLessons,
+        progressPercentage,
+        completedLessonIds: userProgress.filter(p => p.completed).map(p => p.lesson.id)
+      }
+    });
+  } catch (error) {
+    console.error('Get course progress error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+};
+
+// 更新小节完成状态
+const updateLessonProgress = async (req: AuthRequest, res: express.Response) => {
+  try {
+    const { courseId, lessonId } = req.params;
+    const { completed = true } = req.body;
+    const userId = req.user!.id;
+
+    // 验证用户是否已报名课程
+    const enrollment = await prisma.courseEnrollment.findUnique({
+      where: {
+        userId_courseId: { userId, courseId }
+      }
+    });
+
+    if (!enrollment) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not enrolled in this course'
+      });
+    }
+
+    // 验证小节是否属于该课程
+    const lesson = await prisma.courseLesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        chapter: {
+          select: { courseId: true }
+        }
+      }
+    });
+
+    if (!lesson || lesson.chapter.courseId !== courseId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson not found in this course'
+      });
+    }
+
+    // 更新或创建学习进度记录
+    const progress = await prisma.lessonProgress.upsert({
+      where: {
+        userId_lessonId: { userId, lessonId }
+      },
+      update: {
+        completed,
+        completedAt: completed ? new Date() : null
+      },
+      create: {
+        userId,
+        lessonId,
+        completed,
+        completedAt: completed ? new Date() : null
+      }
+    });
+
+    res.json({
+      success: true,
+      data: progress
+    });
+  } catch (error) {
+    console.error('Update lesson progress error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+};
+
 // 路由定义
 router.get('/', getCourses);
 router.get('/:id', getCourse);
+router.get('/:id/progress', authenticate, getCourseProgress);
 router.get('/:courseId/lessons/:lessonId', getLesson);
 router.post('/', authenticate, createCourse);
 router.post('/:id/comments', authenticate, addCourseComment);
 router.post('/:id/like', authenticate, likeCourse);
 router.post('/:id/enroll', authenticate, enrollCourse);
+router.post('/:courseId/lessons/:lessonId/progress', authenticate, updateLessonProgress);
 
 export default router;

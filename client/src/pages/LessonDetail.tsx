@@ -9,8 +9,7 @@ import {
   Eye, 
   ChevronLeft,
   ChevronRight,
-  CheckCircle,
-  User
+  CheckCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -20,6 +19,14 @@ import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import PageTransition from '../components/ui/PageTransition';
+import { cachedFetch, invalidateCache } from '../utils/cache';
+
+interface LessonNavigation {
+  previousLesson: { id: string; title: string; chapterId: string } | null;
+  nextLesson: { id: string; title: string; chapterId: string } | null;
+  currentChapter: { id: string; title: string; order: number };
+  allLessons: { id: string; title: string; order: number; chapterId: string }[];
+}
 
 interface LessonDetail {
   id: string;
@@ -49,6 +56,9 @@ const LessonDetail: React.FC = () => {
   const { user } = useAuth();
   const [lesson, setLesson] = useState<LessonDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [navigation, setNavigation] = useState<LessonNavigation | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [markingComplete, setMarkingComplete] = useState(false);
 
   useEffect(() => {
     if (courseId && lessonId) {
@@ -58,10 +68,18 @@ const LessonDetail: React.FC = () => {
 
   const fetchLesson = async () => {
     try {
-      const response = await fetch(`/api/courses/${courseId}/lessons/${lessonId}`);
+      const response = await cachedFetch(`/api/courses/${courseId}/lessons/${lessonId}`, {}, `lesson:${courseId}:${lessonId}`, 300000); // 5分钟缓存
       if (response.ok) {
         const data = await response.json();
         setLesson(data.data);
+        
+        // 获取导航信息
+        await fetchNavigation(data.data);
+        
+        // 检查是否已完成（需要登录用户）
+        if (user) {
+          await checkLessonCompletion();
+        }
       } else {
         toast.error('课程小节不存在或已被删除');
       }
@@ -71,6 +89,94 @@ const LessonDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchNavigation = async (currentLesson: LessonDetail) => {
+    try {
+      const response = await cachedFetch(`/api/courses/${courseId}`, {}, `course:${courseId}`, 300000); // 5分钟缓存
+      if (response.ok) {
+        const data = await response.json();
+        const course = data.data;
+        
+        // 获取所有小节按顺序排列
+        const allLessons: any[] = [];
+        course.chapters.forEach((chapter: any) => {
+          chapter.lessons.forEach((lesson: any) => {
+            allLessons.push({
+              ...lesson,
+              chapterId: chapter.id,
+              chapterTitle: chapter.title,
+              chapterOrder: chapter.order
+            });
+          });
+        });
+        
+        // 找到当前小节的索引
+        const currentIndex = allLessons.findIndex(l => l.id === currentLesson.id);
+        
+        setNavigation({
+          previousLesson: currentIndex > 0 ? allLessons[currentIndex - 1] : null,
+          nextLesson: currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null,
+          currentChapter: currentLesson.chapter,
+          allLessons
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch navigation:', error);
+    }
+  };
+
+  const checkLessonCompletion = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await cachedFetch(`/api/courses/${courseId}/progress`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      }, `progress:${courseId}:${user.id}`, 60000); // 1分钟缓存
+      
+      if (response.ok) {
+        const data = await response.json();
+        setIsCompleted(data.data.completedLessonIds.includes(lessonId));
+      }
+    } catch (error) {
+      console.error('Failed to check lesson completion:', error);
+    }
+  };
+
+  const markLessonComplete = async () => {
+    if (!user || markingComplete) return;
+    
+    setMarkingComplete(true);
+    try {
+      const response = await fetch(`/api/courses/${courseId}/lessons/${lessonId}/progress`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ completed: !isCompleted })
+      });
+      
+      if (response.ok) {
+        setIsCompleted(!isCompleted);
+        toast.success(isCompleted ? '已取消完成标记' : '已标记为完成');
+        // 清除进度缓存
+        invalidateCache(`progress:${courseId}`);
+      } else {
+        toast.error('操作失败');
+      }
+    } catch (error) {
+      console.error('Failed to mark lesson complete:', error);
+      toast.error('操作失败');
+    } finally {
+      setMarkingComplete(false);
+    }
+  };
+
+  const navigateToLesson = (lessonId: string) => {
+    window.location.href = `/courses/${courseId}/lessons/${lessonId}`;
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -278,21 +384,54 @@ const LessonDetail: React.FC = () => {
             <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.4s' }}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <Button variant="outline" disabled>
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    上一节
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigation?.previousLesson && navigateToLesson(navigation.previousLesson.id)}
+                    disabled={!navigation?.previousLesson}
+                    className="flex items-center space-x-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>上一节</span>
                   </Button>
                   
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span className="text-sm text-muted-foreground">已完成</span>
+                    <Button
+                      onClick={markLessonComplete}
+                      disabled={!user || markingComplete}
+                      variant={isCompleted ? "default" : "outline"}
+                      className="flex items-center space-x-2"
+                    >
+                      {markingComplete ? (
+                        <LoadingSpinner size="sm" />
+                      ) : (
+                        <CheckCircle className={`h-5 w-5 ${isCompleted ? 'text-white' : 'text-green-500'}`} />
+                      )}
+                      <span>{isCompleted ? '已完成' : '标记为完成'}</span>
+                    </Button>
                   </div>
                   
-                  <Button variant="outline" disabled>
-                    下一节
-                    <ChevronRight className="h-4 w-4 ml-2" />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigation?.nextLesson && navigateToLesson(navigation.nextLesson.id)}
+                    disabled={!navigation?.nextLesson}
+                    className="flex items-center space-x-2"
+                  >
+                    <span>下一节</span>
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
+                
+                {/* 进度提示 */}
+                {navigation && (
+                  <div className="mt-4 text-center">
+                    <div className="text-sm text-muted-foreground">
+                      第{navigation.currentChapter.order}章 - {navigation.currentChapter.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      小节 {navigation.allLessons.findIndex(l => l.id === lesson?.id) + 1} / {navigation.allLessons.length}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

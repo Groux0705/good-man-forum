@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  Play, 
   Eye, 
   Heart, 
   MessageSquare, 
-  Clock, 
   User, 
   ArrowLeft, 
   Share2, 
@@ -28,6 +26,7 @@ import ReactMarkdown from 'react-markdown';
 import { CourseDetailSkeleton } from '../components/ui/Skeleton';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import PageTransition from '../components/ui/PageTransition';
+import { cachedFetch, invalidateCache } from '../utils/cache';
 
 interface CourseComment {
   id: string;
@@ -56,6 +55,13 @@ interface CourseChapter {
   order: number;
   duration: number | null;
   lessons: CourseLesson[];
+}
+
+interface CourseProgress {
+  totalLessons: number;
+  completedLessons: number;
+  progressPercentage: number;
+  completedLessonIds: string[];
 }
 
 interface CourseEnrollment {
@@ -95,11 +101,15 @@ const CourseDetail: React.FC = () => {
   const { user } = useAuth();
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [liking, setLiking] = useState(false);
+  const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -110,26 +120,71 @@ const CourseDetail: React.FC = () => {
     }
   }, [id]);
 
-  const fetchCourse = async () => {
+  // 自动展开第一个章节
+  useEffect(() => {
+    if (course && course.chapters.length > 0) {
+      setExpandedChapters(new Set([course.chapters[0].id]));
+    }
+  }, [course]);
+
+  // 获取学习进度
+  useEffect(() => {
+    if (course && user && isEnrolled) {
+      fetchCourseProgress();
+    }
+  }, [course, user, isEnrolled]);
+
+  const fetchCourseProgress = async () => {
+    if (!user || !course) return;
+    
     try {
-      const response = await fetch(`/api/courses/${id}`);
+      const response = await cachedFetch(`/api/courses/${course.id}/progress`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      }, `progress:${course.id}:${user.id}`, 60000); // 1分钟缓存
+      
       if (response.ok) {
         const data = await response.json();
-        setCourse(data.data);
-        
-        // 检查用户是否已报名
-        if (user && data.data.enrollmentList) {
-          const userEnrollment = data.data.enrollmentList.find(
-            (enrollment: CourseEnrollment) => enrollment.userId === user.id
-          );
-          setIsEnrolled(!!userEnrollment);
+        setCourseProgress(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch course progress:', error);
+    }
+  };
+
+  const fetchCourse = async () => {
+    try {
+      setError(null);
+      const response = await cachedFetch(`/api/courses/${id}`, {}, `course:${id}`, 300000); // 5分钟缓存
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError('课程不存在或已被删除');
+        } else {
+          setError('加载课程失败，请稍后重试');
         }
-      } else {
-        toast.error('课程不存在或已被删除');
+        return;
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        setError(data.error || '加载课程失败');
+        return;
+      }
+      
+      setCourse(data.data);
+      
+      // 检查用户是否已报名
+      if (user && data.data.enrollmentList) {
+        const userEnrollment = data.data.enrollmentList.find(
+          (enrollment: CourseEnrollment) => enrollment.userId === user.id
+        );
+        setIsEnrolled(!!userEnrollment);
       }
     } catch (error) {
       console.error('Failed to fetch course:', error);
-      toast.error('加载课程失败');
+      setError('网络错误，请检查连接后重试');
     } finally {
       setLoading(false);
     }
@@ -155,6 +210,9 @@ const CourseDetail: React.FC = () => {
         setIsEnrolled(true);
         setCourse(prev => prev ? { ...prev, enrollments: prev.enrollments + 1 } : null);
         toast.success('报名成功！');
+        // 清除相关缓存
+        invalidateCache(`course:${id}`);
+        invalidateCache(`progress:${id}`);
       } else {
         const data = await response.json();
         toast.error(data.error || '报名失败');
@@ -173,6 +231,9 @@ const CourseDetail: React.FC = () => {
       return;
     }
 
+    if (liking) return;
+
+    setLiking(true);
     try {
       const response = await fetch(`/api/courses/${id}/like`, {
         method: 'POST',
@@ -185,13 +246,19 @@ const CourseDetail: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setCourse(prev => prev ? { ...prev, likes: data.data.likes } : null);
+        setIsLiked(true);
         toast.success('点赞成功');
+        // 清除课程缓存
+        invalidateCache(`course:${id}`);
       } else {
-        toast.error('点赞失败');
+        const errorData = await response.json();
+        toast.error(errorData.error || '点赞失败');
       }
     } catch (error) {
       console.error('Like course error:', error);
-      toast.error('点赞失败');
+      toast.error('网络错误，请稍后重试');
+    } finally {
+      setLiking(false);
     }
   };
 
@@ -228,6 +295,8 @@ const CourseDetail: React.FC = () => {
         } : null);
         setComment('');
         toast.success('评论发表成功');
+        // 清除课程缓存
+        invalidateCache(`course:${id}`);
       } else {
         toast.error('评论发表失败');
       }
@@ -252,6 +321,11 @@ const CourseDetail: React.FC = () => {
   };
 
   const handleLessonClick = (courseId: string, lessonId: string) => {
+    // 检查是否已报名
+    if (!isEnrolled) {
+      toast.error('请先报名课程');
+      return;
+    }
     // 导航到课程小节页面
     window.location.href = `/courses/${courseId}/lessons/${lessonId}`;
   };
@@ -304,6 +378,31 @@ const CourseDetail: React.FC = () => {
   // 当loading时，完全显示骨架屏
   if (loading) {
     return <CourseDetailSkeleton />;
+  }
+
+  // 错误状态处理
+  if (error) {
+    return (
+      <PageTransition>
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-4">加载失败</h1>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <div className="flex justify-center space-x-4">
+              <Button onClick={() => window.location.reload()} variant="outline">
+                重新加载
+              </Button>
+              <Button asChild>
+                <Link to="/courses">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  返回课程列表
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </PageTransition>
+    );
   }
 
   if (!course) {
@@ -419,69 +518,97 @@ const CourseDetail: React.FC = () => {
                 <CardContent>
                   {course.chapters.length > 0 ? (
                     <div className="space-y-4">
-                      {course.chapters.map((chapter, index) => (
-                        <div key={chapter.id} className="border rounded-lg overflow-hidden">
-                          <button
-                            onClick={() => toggleChapter(chapter.id)}
-                            className="w-full p-4 text-left hover:bg-muted/50 transition-colors flex items-center justify-between"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                                {index + 1}
+                      {course.chapters.map((chapter, index) => {
+                        const isExpanded = expandedChapters.has(chapter.id);
+                        const totalDuration = chapter.lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
+                        
+                        return (
+                          <div key={chapter.id} className="border rounded-lg overflow-hidden">
+                            <button
+                              onClick={() => toggleChapter(chapter.id)}
+                              className="w-full p-4 text-left hover:bg-muted/50 transition-colors flex items-center justify-between"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                                  {index + 1}
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-foreground">{chapter.title}</h4>
+                                  {chapter.description && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {chapter.description}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="font-medium text-foreground">{chapter.title}</h4>
-                                {chapter.description && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {chapter.description}
-                                  </p>
+                              <div className="flex items-center space-x-2">
+                                <div className="text-right">
+                                  <div className="text-sm text-muted-foreground">
+                                    {chapter.lessons.length} 小节
+                                  </div>
+                                  {totalDuration > 0 && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {formatDuration(totalDuration)}
+                                    </div>
+                                  )}
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
                                 )}
                               </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm text-muted-foreground">
-                                {chapter.lessons.length} 小节
-                              </span>
-                              {expandedChapters.has(chapter.id) ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </div>
-                          </button>
-                          
-                          {expandedChapters.has(chapter.id) && (
-                            <div className="border-t bg-muted/20">
-                              {chapter.lessons.map((lesson, lessonIndex) => (
-                                <button
-                                  key={lesson.id}
-                                  onClick={() => handleLessonClick(course.id, lesson.id)}
-                                  className="w-full p-4 text-left hover:bg-muted/50 transition-colors flex items-center justify-between border-t first:border-t-0"
-                                >
-                                  <div className="flex items-center space-x-3">
-                                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs">
-                                      {lessonIndex + 1}
+                            </button>
+                            
+                            {isExpanded && (
+                              <div className="border-t bg-muted/20">
+                                {chapter.lessons.map((lesson, lessonIndex) => (
+                                  <button
+                                    key={lesson.id}
+                                    onClick={() => handleLessonClick(course.id, lesson.id)}
+                                    className={`w-full p-4 text-left transition-colors flex items-center justify-between border-t first:border-t-0 ${
+                                      isEnrolled 
+                                        ? 'hover:bg-muted/50 cursor-pointer' 
+                                        : 'opacity-60 cursor-not-allowed'
+                                    }`}
+                                    disabled={!isEnrolled}
+                                  >
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs">
+                                        {lessonIndex + 1}
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        {lesson.type === 'video' ? (
+                                          <PlayCircle className="h-4 w-4 text-primary" />
+                                        ) : (
+                                          <FileText className="h-4 w-4 text-primary" />
+                                        )}
+                                        <span className="text-sm font-medium">{lesson.title}</span>
+                                        {!isEnrolled && (
+                                          <span className="text-xs text-muted-foreground ml-2">（需报名）</span>
+                                        )}
+                                        {isEnrolled && courseProgress && courseProgress.completedLessonIds.includes(lesson.id) && (
+                                          <CheckCircle className="h-4 w-4 text-green-500 ml-2" />
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                      {lesson.type === 'video' ? (
-                                        <PlayCircle className="h-4 w-4 text-primary" />
-                                      ) : (
-                                        <FileText className="h-4 w-4 text-primary" />
+                                      {lesson.duration && (
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatDuration(lesson.duration)}
+                                        </span>
                                       )}
-                                      <span className="text-sm font-medium">{lesson.title}</span>
+                                      {!isEnrolled && (
+                                        <span className="text-xs text-muted-foreground">🔒</span>
+                                      )}
                                     </div>
-                                  </div>
-                                  {lesson.duration && (
-                                    <span className="text-xs text-muted-foreground">
-                                      {formatDuration(lesson.duration)}
-                                    </span>
-                                  )}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-8">
@@ -595,8 +722,18 @@ const CourseDetail: React.FC = () => {
                   </Button>
                   
                   <div className="flex items-center justify-between mt-4">
-                    <Button onClick={handleLike} variant="outline" size="sm">
-                      <Heart className="h-4 w-4 mr-1" />
+                    <Button 
+                      onClick={handleLike} 
+                      variant="outline" 
+                      size="sm"
+                      disabled={liking}
+                      className={`transition-all duration-200 ${isLiked ? 'bg-red-50 border-red-200 text-red-600' : ''}`}
+                    >
+                      {liking ? (
+                        <LoadingSpinner size="sm" className="mr-1" />
+                      ) : (
+                        <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
+                      )}
                       {course.likes}
                     </Button>
                     <Button variant="outline" size="sm">
@@ -606,6 +743,38 @@ const CourseDetail: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* 学习进度 */}
+              {isEnrolled && courseProgress && (
+                <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.25s' }}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Target className="h-5 w-5" />
+                      <span>学习进度</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">完成进度</span>
+                        <span className="text-sm font-medium">
+                          {courseProgress.completedLessons} / {courseProgress.totalLessons} 小节
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${courseProgress.progressPercentage}%` }}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <span className="text-2xl font-bold text-primary">{courseProgress.progressPercentage}%</span>
+                        <p className="text-sm text-muted-foreground mt-1">已完成</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* 课程要求 */}
               {course.requirements && (
