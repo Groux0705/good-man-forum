@@ -17,6 +17,7 @@ import UserSettings from './pages/UserSettings';
 import UserProfile from './pages/UserProfile';
 import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
+import LessonDetail from './pages/LessonDetail';
 import './styles/theme.css';
 import './index.css';
 
@@ -51,6 +52,7 @@ function App() {
                   <Route path="/user/:id" element={<UserProfile />} />
                   <Route path="/courses" element={<Courses />} />
                   <Route path="/course/:id" element={<CourseDetail />} />
+                  <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonDetail />} />
                 </Routes>
               </main>
               <Toaster 

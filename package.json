@@ -13,10 +13,19 @@
     "start": "cd server && npm start",
     "install:all": "npm install && cd server && npm install && cd ../client && npm install"
   },
-  "keywords": ["forum", "v2ex", "react", "express", "typescript"],
+  "keywords": [
+    "forum",
+    "v2ex",
+    "react",
+    "express",
+    "typescript"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "volta": {
+    "node": "22.16.0"
   }
 }

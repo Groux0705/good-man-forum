@@ -17,9 +17,6 @@ const getCourses = async (req: express.Request, res: express.Response) => {
       where.category = String(category);
     }
     
-    if (type && type !== 'all') {
-      where.type = String(type);
-    }
     
     if (search) {
       const searchTerm = String(search);
@@ -58,7 +55,7 @@ const getCourses = async (req: express.Request, res: express.Response) => {
           select: { id: true, username: true, avatar: true }
         },
         _count: {
-          select: { comments: true }
+          select: { comments: true, chapters: true, enrollmentList: true }
         }
       }
     });
@@ -97,6 +94,15 @@ const getCourse = async (req: express.Request, res: express.Response) => {
         user: {
           select: { id: true, username: true, avatar: true, level: true }
         },
+        chapters: {
+          orderBy: { order: 'asc' },
+          include: {
+            lessons: {
+              orderBy: { order: 'asc' },
+              select: { id: true, title: true, type: true, duration: true, order: true }
+            }
+          }
+        },
         comments: {
           orderBy: { createdAt: 'desc' },
           include: {
@@ -104,6 +110,9 @@ const getCourse = async (req: express.Request, res: express.Response) => {
               select: { id: true, username: true, avatar: true, level: true }
             }
           }
+        },
+        enrollmentList: {
+          select: { id: true, userId: true, enrolledAt: true, progress: true }
         }
       }
     });
@@ -141,58 +150,20 @@ const createCourse = async (req: AuthRequest, res: express.Response) => {
       title, 
       description, 
       thumbnail, 
-      type, 
-      content, 
-      videoUrl, 
-      platform, 
       category, 
       tags, 
-      duration, 
-      difficulty = 'beginner' 
+      difficulty = 'beginner',
+      requirements,
+      objectives,
+      chapters = []
     } = req.body;
     const userId = req.user!.id;
 
-    if (!title || !type || !category) {
+    if (!title || !category) {
       return res.status(400).json({
         success: false,
-        error: 'Title, type, and category are required'
+        error: 'Title and category are required'
       });
-    }
-
-    // 验证课程类型
-    const validTypes = ['video', 'text'];
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid course type'
-      });
-    }
-
-    // 验证视频课程必需字段
-    if (type === 'video' && (!videoUrl || !platform)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Video URL and platform are required for video courses'
-      });
-    }
-
-    // 验证文字课程必需字段
-    if (type === 'text' && !content) {
-      return res.status(400).json({
-        success: false,
-        error: 'Content is required for text courses'
-      });
-    }
-
-    // 验证平台类型（仅视频课程）
-    if (type === 'video' && platform) {
-      const validPlatforms = ['youtube', 'bilibili', 'local'];
-      if (!validPlatforms.includes(platform)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid platform'
-        });
-      }
     }
 
     // 验证分类
@@ -218,14 +189,11 @@ const createCourse = async (req: AuthRequest, res: express.Response) => {
         title,
         description,
         thumbnail,
-        type,
-        content: type === 'text' ? content : null,
-        videoUrl: type === 'video' ? videoUrl : null,
-        platform: type === 'video' ? platform : null,
         category,
         tags,
-        duration: duration ? Number(duration) : null,
         difficulty,
+        requirements,
+        objectives,
         userId,
         published: true
       },
@@ -329,11 +297,119 @@ const likeCourse = async (req: AuthRequest, res: express.Response) => {
   }
 };
 
+// 报名课程
+const enrollCourse = async (req: AuthRequest, res: express.Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const course = await prisma.course.findUnique({ where: { id } });
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+    }
+
+    // 检查是否已报名
+    const existingEnrollment = await prisma.courseEnrollment.findUnique({
+      where: {
+        userId_courseId: { userId, courseId: id }
+      }
+    });
+
+    if (existingEnrollment) {
+      return res.status(400).json({
+        success: false,
+        error: 'Already enrolled in this course'
+      });
+    }
+
+    const enrollment = await prisma.courseEnrollment.create({
+      data: {
+        userId,
+        courseId: id
+      }
+    });
+
+    // 更新课程报名人数
+    await prisma.course.update({
+      where: { id },
+      data: { enrollments: { increment: 1 } }
+    });
+
+    res.status(201).json({
+      success: true,
+      data: enrollment
+    });
+  } catch (error) {
+    console.error('Enroll course error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+};
+
+// 获取课程小节详情
+const getLesson = async (req: express.Request, res: express.Response) => {
+  try {
+    const { courseId, lessonId } = req.params;
+
+    const lesson = await prisma.courseLesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        chapter: {
+          include: {
+            course: {
+              select: { id: true, title: true, userId: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson not found'
+      });
+    }
+
+    // 验证课程ID匹配
+    if (lesson.chapter.course.id !== courseId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lesson not found in this course'
+      });
+    }
+
+    // 增加观看次数
+    await prisma.courseLesson.update({
+      where: { id: lessonId },
+      data: { views: { increment: 1 } }
+    });
+
+    res.json({
+      success: true,
+      data: lesson
+    });
+  } catch (error) {
+    console.error('Get lesson error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+};
+
 // 路由定义
 router.get('/', getCourses);
 router.get('/:id', getCourse);
+router.get('/:courseId/lessons/:lessonId', getLesson);
 router.post('/', authenticate, createCourse);
 router.post('/:id/comments', authenticate, addCourseComment);
 router.post('/:id/like', authenticate, likeCourse);
+router.post('/:id/enroll', authenticate, enrollCourse);
 
 export default router;

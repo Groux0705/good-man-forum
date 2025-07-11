@@ -109,6 +109,7 @@ model Notification {
   @@map("notifications")
 }
 
+// 重构的课程模型
 model Course {
   id          String   @id @default(cuid())
   title       String
@@ -145,20 +146,6 @@ model Course {
   enrollmentList CourseEnrollment[] // 报名记录
 
   @@map("courses")
-}
-
-model CourseComment {
-  id        String   @id @default(cuid())
-  content   String
-  userId    String
-  courseId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@map("course_comments")
 }
 
 // 新增：课程章节模型
@@ -253,4 +240,18 @@ model LessonProgress {
   
   @@unique([userId, lessonId])
   @@map("lesson_progress")
+}
+
+model CourseComment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_comments")
 }

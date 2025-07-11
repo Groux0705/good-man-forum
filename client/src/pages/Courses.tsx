@@ -14,16 +14,12 @@ interface Course {
   title: string;
   description: string | null;
   thumbnail: string | null;
-  type: string;
-  content: string | null;
-  videoUrl: string | null;
-  platform: string | null;
   category: string;
   tags: string | null;
-  duration: number | null;
   difficulty: string;
   views: number;
   likes: number;
+  enrollments: number;
   createdAt: string;
   user: {
     id: string;
@@ -32,6 +28,8 @@ interface Course {
   };
   _count: {
     comments: number;
+    chapters: number;
+    enrollmentList: number;
   };
 }
 
@@ -74,8 +72,8 @@ const Courses: React.FC = () => {
 
   const typeOptions = [
     { id: 'all', name: '全部类型', icon: Grid },
-    { id: 'video', name: '视频课程', icon: Video },
-    { id: 'text', name: '文字课程', icon: BookOpen }
+    { id: 'featured', name: '推荐课程', icon: Star },
+    { id: 'enrolled', name: '已报名', icon: BookOpen }
   ];
 
   const sortOptions = [
@@ -96,7 +94,6 @@ const Courses: React.FC = () => {
         page: page.toString(),
         limit: '12',
         ...(category !== 'all' && { category }),
-        ...(type !== 'all' && { type }),
         ...(sortBy && { sort: sortBy }),
         ...(searchTerm && { search: searchTerm })
       });
@@ -183,22 +180,12 @@ const Courses: React.FC = () => {
   const getCourseThumbnail = (course: Course) => {
     if (course.thumbnail) return course.thumbnail;
     
-    // 为不同类型生成默认缩略图
-    if (course.type === 'video' && course.videoUrl && course.videoUrl.includes('youtube.com')) {
-      const videoId = course.videoUrl.split('v=')[1]?.split('&')[0];
-      if (videoId) return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-    }
-    
     // 默认缩略图
-    if (course.type === 'video') {
-      return 'https://via.placeholder.com/320x180?text=Video+Course';
-    } else {
-      return 'https://via.placeholder.com/320x180?text=Text+Course';
-    }
+    return 'https://via.placeholder.com/320x180?text=Course';
   };
 
-  const getCourseTypeIcon = (course: Course) => {
-    return course.type === 'video' ? Play : BookOpen;
+  const getCourseTypeIcon = () => {
+    return BookOpen;
   };
 
   const getDifficultyBadgeColor = (difficulty: string) => {
@@ -418,9 +405,7 @@ const Courses: React.FC = () => {
               ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
               : 'space-y-4'
             } mb-8`}>
-              {courses.map((course, index) => {
-                const TypeIcon = getCourseTypeIcon(course);
-                return (
+              {courses.map((course, index) => (
                   <Link key={course.id} to={`/course/${course.id}`}>
                     <div>
                       {viewMode === 'grid' ? (
@@ -436,26 +421,15 @@ const Courses: React.FC = () => {
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                                  <TypeIcon className="h-5 w-5 text-gray-900 ml-1" />
+                                  <BookOpen className="h-5 w-5 text-gray-900 ml-1" />
                                 </div>
                               </div>
                             </div>
                             
-                            {/* 时长标签 */}
-                            {course.duration && (
-                              <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                                {formatDuration(course.duration)}
-                              </div>
-                            )}
-                            
                             {/* 课程类型标签 */}
                             <div className="absolute top-2 left-2">
                               <Badge variant="secondary" className="text-xs">
-                                {course.type === 'video' 
-                                  ? (course.platform === 'youtube' ? 'YouTube' : 
-                                     course.platform === 'bilibili' ? 'Bilibili' : 
-                                     '视频课程')
-                                  : '文字课程'}
+                                课程
                               </Badge>
                             </div>
                             
@@ -503,6 +477,10 @@ const Courses: React.FC = () => {
                                   <MessageSquare className="h-3 w-3" />
                                   <span>{course._count.comments}</span>
                                 </div>
+                                <div className="flex items-center space-x-1">
+                                  <BookOpen className="h-3 w-3" />
+                                  <span>{course._count.chapters || 0}章节</span>
+                                </div>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Clock className="h-3 w-3" />
@@ -538,26 +516,21 @@ const Courses: React.FC = () => {
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                   <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
-                                    <TypeIcon className="h-4 w-4 text-gray-900 ml-1" />
+                                    <BookOpen className="h-4 w-4 text-gray-900 ml-1" />
                                   </div>
                                 </div>
                               </div>
                               
-                              {/* 时长标签 */}
-                              {course.duration && (
-                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                                  {formatDuration(course.duration)}
-                                </div>
-                              )}
-                              
-                              {/* 课程类型标签 */}
+                              {/* 课程类型和难度标签 */}
                               <div className="absolute top-2 left-2">
                                 <Badge variant="secondary" className="text-xs">
-                                  {course.type === 'video' 
-                                    ? (course.platform === 'youtube' ? 'YouTube' : 
-                                       course.platform === 'bilibili' ? 'Bilibili' : 
-                                       '视频课程')
-                                    : '文字课程'}
+                                  课程
+                                </Badge>
+                              </div>
+                              <div className="absolute top-2 right-2">
+                                <Badge className={`text-xs text-white ${getDifficultyBadgeColor(course.difficulty)}`}>
+                                  {course.difficulty === 'beginner' ? '初级' :
+                                   course.difficulty === 'intermediate' ? '中级' : '高级'}
                                 </Badge>
                               </div>
                             </div>
@@ -629,8 +602,7 @@ const Courses: React.FC = () => {
                     )}
                     </div>
                   </Link>
-                );
-              })}
+              ))}
             </div>
 
             {/* 分页 */}
