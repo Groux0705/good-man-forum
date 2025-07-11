@@ -361,12 +361,18 @@
 }
 
 @keyframes fade-in {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
 }
 
 @keyframes slide-up {
-  0% { opacity: 0; transform: translateY(30px); }
+  0% { opacity: 0; transform: translateY(10px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
@@ -393,11 +399,11 @@
 }
 
 .animate-fade-in {
-  animation: fade-in 0.5s ease-out;
+  animation: fade-in 0.2s ease-out;
 }
 
 .animate-slide-up {
-  animation: slide-up 0.6s ease-out;
+  animation: slide-up 0.3s ease-out;
 }
 
 .animate-scale-in {
@@ -449,11 +455,11 @@
 
 /* Page transition styles */
 .page-transition {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.2s ease-out;
 }
 
 .page-transition-delayed {
-  animation: fade-in 0.5s ease-out 0.1s both;
+  animation: fade-in 0.3s ease-out 0.05s both;
 }
 
 /* Loading spinner */

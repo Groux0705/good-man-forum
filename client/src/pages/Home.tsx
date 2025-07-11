@@ -7,6 +7,8 @@ import Sidebar from '../components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import PageTransition from '../components/ui/PageTransition';
+import { cachedFetch } from '../utils/cache';
 
 const Home: React.FC = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -64,7 +66,8 @@ const Home: React.FC = () => {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <PageTransition>
+      <div className="container mx-auto px-4 py-8">
       <div className="flex gap-8">
         <main className="flex-1">
           <div className="mb-8">
@@ -149,6 +152,7 @@ const Home: React.FC = () => {
         <Sidebar />
       </div>
     </div>
+    </PageTransition>
   );
 };
 

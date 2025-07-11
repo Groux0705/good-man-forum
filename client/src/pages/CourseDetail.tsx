@@ -114,11 +114,22 @@ const CourseDetail: React.FC = () => {
   useEffect(() => {
     if (id) {
       setLoading(true);
+      // 重置报名状态
+      setIsEnrolled(false);
       Promise.resolve().then(() => {
         fetchCourse();
       });
     }
   }, [id]);
+
+  // 当用户状态改变时，重新获取课程数据以确保报名状态正确
+  useEffect(() => {
+    if (id && course) {
+      // 如果用户状态发生变化，清除缓存并重新获取数据
+      invalidateCache(`GET:/api/courses/${id}`);
+      fetchCourse();
+    }
+  }, [user?.id]); // 只监听用户ID的变化
 
   // 自动展开第一个章节
   useEffect(() => {
@@ -133,6 +144,19 @@ const CourseDetail: React.FC = () => {
       fetchCourseProgress();
     }
   }, [course, user, isEnrolled]);
+
+  // 检查用户报名状态 - 当用户或课程数据变化时
+  useEffect(() => {
+    if (user && course && course.enrollmentList) {
+      const userEnrollment = course.enrollmentList.find(
+        (enrollment: CourseEnrollment) => enrollment.userId === user.id
+      );
+      setIsEnrolled(!!userEnrollment);
+    } else if (!user && course) {
+      // 用户未登录时重置报名状态
+      setIsEnrolled(false);
+    }
+  }, [user, course]);
 
   const fetchCourseProgress = async () => {
     if (!user || !course) return;
@@ -175,13 +199,7 @@ const CourseDetail: React.FC = () => {
       
       setCourse(data.data);
       
-      // 检查用户是否已报名
-      if (user && data.data.enrollmentList) {
-        const userEnrollment = data.data.enrollmentList.find(
-          (enrollment: CourseEnrollment) => enrollment.userId === user.id
-        );
-        setIsEnrolled(!!userEnrollment);
-      }
+      // 注意：报名状态检查现在在单独的useEffect中处理
     } catch (error) {
       console.error('Failed to fetch course:', error);
       setError('网络错误，请检查连接后重试');
@@ -208,11 +226,21 @@ const CourseDetail: React.FC = () => {
 
       if (response.ok) {
         setIsEnrolled(true);
-        setCourse(prev => prev ? { ...prev, enrollments: prev.enrollments + 1 } : null);
+        setCourse(prev => prev ? { 
+          ...prev, 
+          enrollments: prev.enrollments + 1,
+          enrollmentList: [...prev.enrollmentList, { 
+            id: 'temp-' + Date.now(), 
+            userId: user.id, 
+            enrolledAt: new Date().toISOString(), 
+            progress: 0 
+          }]
+        } : null);
         toast.success('报名成功！');
-        // 清除相关缓存
+        // 清除相关缓存，确保下次刷新能获取最新数据
         invalidateCache(`course:${id}`);
         invalidateCache(`progress:${id}`);
+        invalidateCache(`GET:/api/courses/${id}`);
       } else {
         const data = await response.json();
         toast.error(data.error || '报名失败');
@@ -429,7 +457,7 @@ const CourseDetail: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           {/* 返回按钮 */}
-          <div className="mb-6 animate-slide-up">
+          <div className="mb-6">
             <Button variant="ghost" asChild>
               <Link to="/courses" className="flex items-center space-x-2 transition-all duration-200 hover:scale-105">
                 <ArrowLeft className="h-4 w-4" />
@@ -442,7 +470,7 @@ const CourseDetail: React.FC = () => {
             {/* 左侧主要内容 */}
             <div className="lg:col-span-2 space-y-6">
               {/* 课程标题和基本信息 */}
-              <div className="animate-slide-up">
+              <div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
                   {course.title}
                 </h1>
@@ -471,7 +499,7 @@ const CourseDetail: React.FC = () => {
               </div>
 
               {/* 发布人信息 */}
-              <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.1s' }}>
+              <Card className="glass-card">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -495,7 +523,7 @@ const CourseDetail: React.FC = () => {
 
               {/* 课程介绍 */}
               {course.description && (
-                <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle>课程介绍</CardTitle>
                   </CardHeader>
@@ -508,7 +536,7 @@ const CourseDetail: React.FC = () => {
               )}
 
               {/* 课程章节 */}
-              <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
+              <Card className="glass-card">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <BookOpen className="h-5 w-5" />
@@ -620,7 +648,7 @@ const CourseDetail: React.FC = () => {
               </Card>
 
               {/* 讲师信息 */}
-              <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.4s' }}>
+              <Card className="glass-card">
                 <CardHeader>
                   <CardTitle>讲师信息</CardTitle>
                 </CardHeader>
@@ -649,7 +677,7 @@ const CourseDetail: React.FC = () => {
             {/* 右侧边栏 */}
             <div className="space-y-6">
               {/* 课程封面 */}
-              <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+              <div>
                 <div className="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
                   {course.thumbnail ? (
                     <img 
@@ -667,7 +695,7 @@ const CourseDetail: React.FC = () => {
               </div>
 
               {/* 已报名学员 */}
-              <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              <Card className="glass-card">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Users className="h-5 w-5" />
@@ -697,7 +725,7 @@ const CourseDetail: React.FC = () => {
               </Card>
 
               {/* 报名按钮 */}
-              <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
+              <Card className="glass-card">
                 <CardContent className="p-6">
                   <Button 
                     onClick={handleEnroll}
@@ -746,7 +774,7 @@ const CourseDetail: React.FC = () => {
 
               {/* 学习进度 */}
               {isEnrolled && courseProgress && (
-                <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.25s' }}>
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Target className="h-5 w-5" />
@@ -778,7 +806,7 @@ const CourseDetail: React.FC = () => {
 
               {/* 课程要求 */}
               {course.requirements && (
-                <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.4s' }}>
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <CheckCircle className="h-5 w-5" />
@@ -795,7 +823,7 @@ const CourseDetail: React.FC = () => {
 
               {/* 学习目标 */}
               {course.objectives && (
-                <Card className="glass-card animate-slide-up" style={{ animationDelay: '0.5s' }}>
+                <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Target className="h-5 w-5" />
@@ -813,7 +841,7 @@ const CourseDetail: React.FC = () => {
           </div>
 
           {/* 评论区 */}
-          <div className="mt-8 animate-slide-up" style={{ animationDelay: '0.6s' }}>
+          <div className="mt-8">
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">

@@ -11,20 +11,8 @@ const PageTransition: React.FC<PageTransitionProps> = ({
   className = '',
   delay = 0
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [delay]);
-
   return (
-    <div 
-      className={`page-transition ${isVisible ? 'animate-fade-in' : 'opacity-0'} ${className}`}
-    >
+    <div className={`${className}`}>
       {children}
     </div>
   );

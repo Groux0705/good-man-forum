@@ -27,7 +27,11 @@
       "Bash(grep -n \"return (\" src/pages/CourseDetail.tsx)",
       "Bash(sed:*)",
       "Bash(npm start)",
-      "Bash(./test-course-features.sh:*)"
+      "Bash(./test-course-features.sh:*)",
+      "Bash(./test-page-transitions.sh:*)",
+      "Bash(cd /Users/mac/dev/good-man-forum/client/src/pages)",
+      "Bash(grep -n \"animate-slide-up\" CourseDetail.tsx)",
+      "Bash(kill:*)"
     ],
     "deny": []
   }
