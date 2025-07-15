@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Play, Eye, Heart, MessageSquare, Filter, Clock, User, Search, Grid, List, Star, Calendar, TrendingUp, BookOpen, Video } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
@@ -50,8 +50,8 @@ const Courses: React.FC = () => {
   const type = searchParams.get('type') || 'all';
   
   const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true); // 初始为true，确保显示骨架屏
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [pagination, setPagination] = useState({
@@ -61,33 +61,34 @@ const Courses: React.FC = () => {
     pages: 0
   });
 
-  const categories = [
+  const categories = useMemo(() => [
     { id: 'all', name: '全部', color: 'bg-muted-foreground', icon: Grid },
     { id: 'relationship', name: '恋爱关系', color: 'bg-pink-500', icon: Heart },
     { id: 'communication', name: '沟通技巧', color: 'bg-blue-500', icon: MessageSquare },
     { id: 'self-improvement', name: '自我提升', color: 'bg-green-500', icon: TrendingUp },
     { id: 'dating', name: '约会技巧', color: 'bg-purple-500', icon: Star },
     { id: 'psychology', name: '心理学', color: 'bg-orange-500', icon: User }
-  ];
+  ], []);
 
-  const typeOptions = [
+  const typeOptions = useMemo(() => [
     { id: 'all', name: '全部类型', icon: Grid },
     { id: 'featured', name: '推荐课程', icon: Star },
     { id: 'enrolled', name: '已报名', icon: BookOpen }
-  ];
+  ], []);
 
-  const sortOptions = [
+  const sortOptions = useMemo(() => [
     { id: 'latest', name: '最新发布', icon: Calendar },
     { id: 'popular', name: '最受欢迎', icon: TrendingUp },
     { id: 'views', name: '播放量', icon: Eye },
     { id: 'likes', name: '点赞数', icon: Heart }
-  ];
+  ], []);
 
-  const fetchCourses = async (page = 1, showSkeleton = true) => {
+  const fetchCourses = useCallback(async (page = 1, showLoading = true) => {
     try {
-      if (showSkeleton) {
+      if (showLoading) {
         setLoading(true);
-        setCourses([]);
+      } else {
+        setIsFiltering(true);
       }
       
       const params = new URLSearchParams({
@@ -102,32 +103,36 @@ const Courses: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setCourses(data.data.courses || []); // 确保总是数组
+        
+        // 平滑过渡：先设置数据，再移除加载状态
+        setCourses(data.data.courses || []);
         setPagination(data.data.pagination);
+        
+        // 使用 setTimeout 确保数据渲染完成后再移除加载状态
+        setTimeout(() => {
+          setLoading(false);
+          setIsFiltering(false);
+        }, 100);
       } else {
-        setCourses([]); // 失败时设置为空数组
+        setCourses([]);
+        setPagination({ page: 1, limit: 12, total: 0, pages: 0 });
+        setLoading(false);
+        setIsFiltering(false);
       }
     } catch (error) {
       console.error('Failed to fetch courses:', error);
-      setCourses([]); // 错误时设置为空数组
-    } finally {
+      setCourses([]);
+      setPagination({ page: 1, limit: 12, total: 0, pages: 0 });
       setLoading(false);
-      setIsInitialLoad(false);
+      setIsFiltering(false);
     }
-  };
+  }, [category, sortBy, searchTerm]);
 
   useEffect(() => {
-    // 立即设置loading状态，防止任何闪烁
-    setLoading(true);
-    setCourses([]);
-    
-    // 使用微任务确保状态更新立即生效
-    Promise.resolve().then(() => {
-      fetchCourses(1, false);
-    });
-  }, [category, type, sortBy, searchTerm]);
+    fetchCourses(1, true);
+  }, [fetchCourses]);
 
-  const handleCategoryChange = (newCategory: string) => {
+  const handleCategoryChange = useCallback((newCategory: string) => {
     setSearchParams(newCategory === 'all' ? { 
       ...(type !== 'all' && { type }),
       ...(sortBy !== 'latest' && { sort: sortBy }) 
@@ -136,68 +141,55 @@ const Courses: React.FC = () => {
       ...(type !== 'all' && { type }),
       ...(sortBy !== 'latest' && { sort: sortBy }) 
     });
-  };
+  }, [type, sortBy, setSearchParams]);
 
-  const handleTypeChange = (newType: string) => {
+  const handleTypeChange = useCallback((newType: string) => {
     setSearchParams({
       ...(category !== 'all' && { category }),
       ...(newType !== 'all' && { type: newType }),
       ...(sortBy !== 'latest' && { sort: sortBy })
     });
-  };
+  }, [category, sortBy, setSearchParams]);
 
-  const handleSortChange = (newSort: string) => {
+  const handleSortChange = useCallback((newSort: string) => {
     setSearchParams({
       ...(category !== 'all' && { category }),
       ...(type !== 'all' && { type }),
       ...(newSort !== 'latest' && { sort: newSort })
     });
-  };
+  }, [category, type, setSearchParams]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setCourses([]);
     fetchCourses(1, false);
-  };
+  }, [fetchCourses]);
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return '';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const formatViews = (views: number) => {
+  const formatViews = useCallback((views: number) => {
     if (views >= 1000000) {
       return `${(views / 1000000).toFixed(1)}M`;
     } else if (views >= 1000) {
       return `${(views / 1000).toFixed(1)}K`;
     }
     return views.toString();
-  };
+  }, []);
 
-  const getCourseThumbnail = (course: Course) => {
+  const getCourseThumbnail = useCallback((course: Course) => {
     if (course.thumbnail) return course.thumbnail;
-    
-    // 默认缩略图
     return 'https://via.placeholder.com/320x180?text=Course';
-  };
+  }, []);
 
-  const getCourseTypeIcon = () => {
-    return BookOpen;
-  };
-
-  const getDifficultyBadgeColor = (difficulty: string) => {
+  const getDifficultyBadgeColor = useCallback((difficulty: string) => {
     switch (difficulty) {
       case 'beginner': return 'bg-green-500';
       case 'intermediate': return 'bg-yellow-500';
       case 'advanced': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
-  };
+  }, []);
 
-  // 当loading时，完全不渲染任何动态内容，只显示骨架屏
+  const memoizedCourses = useMemo(() => courses, [courses]);
+
+  // 初始加载时的骨架屏
   if (loading) {
     return (
       <PageTransition>
@@ -282,7 +274,7 @@ const Courses: React.FC = () => {
                 </span>
                 <span className="flex items-center">
                   <Eye className="h-4 w-4 mr-1" />
-                  累计学习 {courses.reduce((acc, c) => acc + c.views, 0).toLocaleString()}
+                  累计学习 {memoizedCourses.reduce((acc, c) => acc + c.views, 0).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -297,10 +289,10 @@ const Courses: React.FC = () => {
                     placeholder="搜索课程..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-64 bg-background border-border"
+                    className="pl-10 pr-4 py-2 w-64 glass-input"
                   />
                 </div>
-                <Button type="submit" variant="outline" size="sm" className="ml-2">
+                <Button type="submit" variant="outline" size="sm" className="ml-2 button-glass">
                   搜索
                 </Button>
               </form>
@@ -310,7 +302,7 @@ const Courses: React.FC = () => {
                   variant={viewMode === 'grid' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
-                  className="transition-all duration-200"
+                  className="button-glass transition-all duration-200"
                 >
                   <Grid className="h-4 w-4" />
                 </Button>
@@ -318,7 +310,7 @@ const Courses: React.FC = () => {
                   variant={viewMode === 'list' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className="transition-all duration-200"
+                  className="button-glass transition-all duration-200"
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -340,7 +332,8 @@ const Courses: React.FC = () => {
                     variant={category === cat.id ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleCategoryChange(cat.id)}
-                    className="flex items-center space-x-2 transition-all duration-200 hover:scale-105"
+                    className="flex items-center space-x-2 button-glass transition-all duration-200 hover:scale-105"
+                    disabled={isFiltering}
                   >
                     <IconComponent className="h-3 w-3" />
                     <span>{cat.name}</span>
@@ -364,7 +357,8 @@ const Courses: React.FC = () => {
                       variant={type === option.id ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleTypeChange(option.id)}
-                      className="flex items-center space-x-1 transition-all duration-200 hover:scale-105"
+                      className="flex items-center space-x-1 button-glass transition-all duration-200 hover:scale-105"
+                      disabled={isFiltering}
                     >
                       <IconComponent className="h-3 w-3" />
                       <span>{option.name}</span>
@@ -386,7 +380,8 @@ const Courses: React.FC = () => {
                       variant={sortBy === option.id ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleSortChange(option.id)}
-                      className="flex items-center space-x-1 transition-all duration-200 hover:scale-105"
+                      className="flex items-center space-x-1 button-glass transition-all duration-200 hover:scale-105"
+                      disabled={isFiltering}
                     >
                       <IconComponent className="h-3 w-3" />
                       <span>{option.name}</span>
@@ -398,18 +393,29 @@ const Courses: React.FC = () => {
           </div>
         </div>
 
+        {/* 过滤状态指示器 */}
+        {isFiltering && (
+          <div className="mb-4 flex items-center justify-center">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <LoadingSpinner />
+              <span>正在筛选课程...</span>
+            </div>
+          </div>
+        )}
+
         {/* 课程网格/列表 */}
-        {courses.length > 0 ? (
-          <div>
-            <div className={`${viewMode === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
-              : 'space-y-4'
-            } mb-8`}>
-              {courses.map((course, index) => (
+        <div className={`transition-opacity duration-300 ${isFiltering ? 'opacity-50' : 'opacity-100'}`}>
+          {memoizedCourses.length > 0 ? (
+            <div>
+              <div className={`${viewMode === 'grid' 
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
+                : 'space-y-4'
+              } mb-8`}>
+                {memoizedCourses.map((course, index) => (
                   <Link key={course.id} to={`/course/${course.id}`}>
-                    <div>
+                    <div className="stagger-item" style={{ animationDelay: `${index * 0.05}s` }}>
                       {viewMode === 'grid' ? (
-                        <Card className="glass-card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                        <Card className="card-glass group cursor-pointer hover-lift transition-all duration-300 will-change-transform">
                         <CardContent className="p-0">
                           {/* 课程缩略图 */}
                           <div className="relative aspect-video rounded-t-lg overflow-hidden">
@@ -417,6 +423,7 @@ const Courses: React.FC = () => {
                               src={getCourseThumbnail(course)}
                               alt={course.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -428,7 +435,7 @@ const Courses: React.FC = () => {
                             
                             {/* 课程类型标签 */}
                             <div className="absolute top-2 left-2">
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-xs badge-glass">
                                 课程
                               </Badge>
                             </div>
@@ -491,8 +498,8 @@ const Courses: React.FC = () => {
                             {/* 标签 */}
                             {course.tags && (
                               <div className="flex flex-wrap gap-1">
-                                {course.tags.split(',').slice(0, 3).map((tag, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
+                                {course.tags.split(',').slice(0, 3).map((tag, tagIndex) => (
+                                  <Badge key={tagIndex} variant="outline" className="text-xs badge-glass">
                                     {tag.trim()}
                                   </Badge>
                                 ))}
@@ -503,7 +510,7 @@ const Courses: React.FC = () => {
                       </Card>
                     ) : (
                       /* 列表视图 */
-                      <Card className="glass-card group cursor-pointer hover:shadow-lg transition-all duration-300">
+                      <Card className="card-glass group cursor-pointer hover-lift transition-all duration-300">
                         <CardContent className="p-4">
                           <div className="flex space-x-4">
                             {/* 缩略图 */}
@@ -512,6 +519,7 @@ const Courses: React.FC = () => {
                                 src={getCourseThumbnail(course)}
                                 alt={course.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
                                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -523,7 +531,7 @@ const Courses: React.FC = () => {
                               
                               {/* 课程类型和难度标签 */}
                               <div className="absolute top-2 left-2">
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs badge-glass">
                                   课程
                                 </Badge>
                               </div>
@@ -588,8 +596,8 @@ const Courses: React.FC = () => {
                               {/* 标签 */}
                               {course.tags && (
                                 <div className="flex flex-wrap gap-1 mt-3">
-                                  {course.tags.split(',').slice(0, 4).map((tag, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs">
+                                  {course.tags.split(',').slice(0, 4).map((tag, tagIndex) => (
+                                    <Badge key={tagIndex} variant="outline" className="text-xs badge-glass">
                                       {tag.trim()}
                                     </Badge>
                                   ))}
@@ -602,40 +610,44 @@ const Courses: React.FC = () => {
                     )}
                     </div>
                   </Link>
-              ))}
-            </div>
-
-            {/* 分页 */}
-            {pagination.pages > 1 && (
-              <div className="flex justify-center">
-                <div className="flex items-center space-x-2">
-                  {[...Array(pagination.pages)].map((_, i) => (
-                    <Button
-                      key={i + 1}
-                      variant={pagination.page === i + 1 ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => fetchCourses(i + 1, false)} // 分页不显示骨架屏
-                      className="min-w-[40px] transition-all duration-200 hover:scale-105"
-                    >
-                      {i + 1}
-                    </Button>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">暂无课程内容</h3>
-            <p className="text-muted-foreground">
-              {category === 'all' && type === 'all' ? '还没有任何课程内容' : 
-               type === 'video' ? '该筛选条件下暂无视频课程' :
-               type === 'text' ? '该筛选条件下暂无文字课程' :
-               '该分类下暂无课程内容'}
-            </p>
-          </div>
-        )}
+
+              {/* 分页 */}
+              {pagination.pages > 1 && (
+                <div className="flex justify-center">
+                  <div className="flex items-center space-x-2">
+                    {[...Array(pagination.pages)].map((_, i) => (
+                      <Button
+                        key={i + 1}
+                        variant={pagination.page === i + 1 ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => fetchCourses(i + 1, false)}
+                        className="min-w-[40px] button-glass transition-all duration-200 hover:scale-105"
+                        disabled={isFiltering}
+                      >
+                        {i + 1}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="card-glass rounded-lg p-8 max-w-md mx-auto">
+                <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">暂无课程内容</h3>
+                <p className="text-muted-foreground">
+                  {category === 'all' && type === 'all' ? '还没有任何课程内容' : 
+                   type === 'video' ? '该筛选条件下暂无视频课程' :
+                   type === 'text' ? '该筛选条件下暂无文字课程' :
+                   '该分类下暂无课程内容'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   </PageTransition>

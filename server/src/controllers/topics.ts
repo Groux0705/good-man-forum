@@ -12,7 +12,35 @@ export const getTopics = async (req: Request, res: Response) => {
     let where: any = {};
     
     if (node) {
-      where.nodeId = String(node);
+      const nodeParam = String(node);
+      // 首先尝试通过节点名称查找节点
+      const nodeRecord = await prisma.node.findFirst({
+        where: {
+          OR: [
+            { name: nodeParam },
+            { id: nodeParam }
+          ]
+        },
+        select: { id: true }
+      });
+      
+      if (nodeRecord) {
+        where.nodeId = nodeRecord.id;
+      } else {
+        // 如果节点不存在，返回空结果
+        return res.json({
+          success: true,
+          data: {
+            topics: [],
+            pagination: {
+              page: Number(page),
+              limit: Number(limit),
+              total: 0,
+              pages: 0
+            }
+          }
+        });
+      }
     }
     
     if (search) {

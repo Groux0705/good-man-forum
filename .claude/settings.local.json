@@ -31,7 +31,9 @@
       "Bash(./test-page-transitions.sh:*)",
       "Bash(cd /Users/mac/dev/good-man-forum/client/src/pages)",
       "Bash(grep -n \"animate-slide-up\" CourseDetail.tsx)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(pm2 restart:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

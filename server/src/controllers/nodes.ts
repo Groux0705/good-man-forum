@@ -26,8 +26,14 @@ export const getNode = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const node = await prisma.node.findUnique({
-      where: { id },
+    // 支持按ID或名称查找节点
+    const node = await prisma.node.findFirst({
+      where: {
+        OR: [
+          { id: id },
+          { name: id }
+        ]
+      },
       include: {
         topicList: {
           take: 20,

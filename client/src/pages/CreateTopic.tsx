@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
 import { topicService } from '../services/topic';
@@ -15,10 +15,12 @@ interface FormData {
 
 const CreateTopic: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormData>();
+  const preSelectedNode = searchParams.get('node');
 
   useEffect(() => {
     if (!user) {
@@ -30,13 +32,21 @@ const CreateTopic: React.FC = () => {
       try {
         const data = await nodeService.getNodes();
         setNodes(data);
+        
+        // 如果有预选节点，设置默认值
+        if (preSelectedNode) {
+          const selectedNode = data.find(node => node.name === preSelectedNode);
+          if (selectedNode) {
+            setValue('nodeId', selectedNode.id);
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch nodes:', error);
       }
     };
 
     fetchNodes();
-  }, [user, navigate]);
+  }, [user, navigate, preSelectedNode, setValue]);
 
   const onSubmit = async (data: FormData) => {
     try {

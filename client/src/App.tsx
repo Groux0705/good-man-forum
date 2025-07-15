@@ -1,10 +1,10 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Header from './components/Header';
+import PageTransition from './components/ui/PageTransition';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -18,6 +18,7 @@ import UserProfile from './pages/UserProfile';
 import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import LessonLearning from './pages/LessonLearning';
+import AnimationDemo from './pages/AnimationDemo';
 import './styles/theme.css';
 import './index.css';
 
@@ -39,21 +40,24 @@ function App() {
             <div className="min-h-screen theme-bg theme-text">
               <Header />
               <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/topic/:id" element={<TopicDetail />} />
-                  <Route path="/create" element={<CreateTopic />} />
-                  <Route path="/nodes" element={<NodeList />} />
-                  <Route path="/node/:name" element={<NodeDetail />} />
-                  <Route path="/search" element={<SearchResults />} />
-                  <Route path="/settings" element={<UserSettings />} />
-                  <Route path="/user/:id" element={<UserProfile />} />
-                  <Route path="/courses" element={<Courses />} />
-                  <Route path="/course/:id" element={<CourseDetail />} />
-                  <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonLearning />} />
-                </Routes>
+                <PageTransition>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/topic/:id" element={<TopicDetail />} />
+                    <Route path="/create" element={<CreateTopic />} />
+                    <Route path="/nodes" element={<NodeList />} />
+                    <Route path="/node/:name" element={<NodeDetail />} />
+                    <Route path="/search" element={<SearchResults />} />
+                    <Route path="/settings" element={<UserSettings />} />
+                    <Route path="/user/:id" element={<UserProfile />} />
+                    <Route path="/courses" element={<Courses />} />
+                    <Route path="/course/:id" element={<CourseDetail />} />
+                    <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonLearning />} />
+                    <Route path="/demo" element={<AnimationDemo />} />
+                  </Routes>
+                </PageTransition>
               </main>
               <Toaster 
                 position="top-right"

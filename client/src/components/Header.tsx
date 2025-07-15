@@ -12,11 +12,11 @@ const Header: React.FC = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b theme-border theme-bg/95 backdrop-blur supports-[backdrop-filter]:theme-bg/60">
+    <header className="sticky top-0 z-50 w-full border-b theme-border header-glass">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-6">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg theme-bg-primary text-white">
+          <Link to="/" className="flex items-center space-x-2 hover-glow">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg theme-bg-primary text-white float-gentle">
               <span className="text-sm font-bold">GM</span>
             </div>
             <span className="text-lg font-semibold theme-text">Good Man Forum</span>
@@ -24,19 +24,19 @@ const Header: React.FC = () => {
           
           <nav className="hidden md:flex items-center space-x-1">
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/" className="flex items-center space-x-2 theme-hover">
+              <Link to="/" className="flex items-center space-x-2 button-glass hover-lift">
                 <Home className="h-4 w-4" />
                 <span>首页</span>
               </Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/courses" className="flex items-center space-x-2 theme-hover">
+              <Link to="/courses" className="flex items-center space-x-2 button-glass hover-lift">
                 <BookOpen className="h-4 w-4" />
                 <span>课程</span>
               </Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/nodes" className="flex items-center space-x-2 theme-hover">
+              <Link to="/nodes" className="flex items-center space-x-2 button-glass hover-lift">
                 <Layers className="h-4 w-4" />
                 <span>节点</span>
               </Link>
@@ -82,11 +82,11 @@ const Header: React.FC = () => {
                   {showUserMenu && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-48 theme-bg theme-border border rounded-lg shadow-lg z-50">
+                      <div className="absolute right-0 top-full mt-2 w-48 dropdown-glass border rounded-lg shadow-lg z-50">
                         <div className="p-2 space-y-1">
                           <Link
                             to={`/user/${user.id}`}
-                            className="flex items-center space-x-3 px-3 py-2 rounded-md theme-hover transition-colors text-sm theme-text"
+                            className="flex items-center space-x-3 px-3 py-2 rounded-md hover-lift transition-colors text-sm theme-text"
                             onClick={() => setShowUserMenu(false)}
                           >
                             <User className="h-4 w-4" />
@@ -94,7 +94,7 @@ const Header: React.FC = () => {
                           </Link>
                           <Link
                             to="/settings"
-                            className="flex items-center space-x-3 px-3 py-2 rounded-md theme-hover transition-colors text-sm theme-text"
+                            className="flex items-center space-x-3 px-3 py-2 rounded-md hover-lift transition-colors text-sm theme-text"
                             onClick={() => setShowUserMenu(false)}
                           >
                             <Settings className="h-4 w-4" />
@@ -106,7 +106,7 @@ const Header: React.FC = () => {
                               logout();
                               setShowUserMenu(false);
                             }}
-                            className="w-full flex items-center space-x-3 px-3 py-2 rounded-md theme-hover transition-colors text-sm text-left theme-text"
+                            className="w-full flex items-center space-x-3 px-3 py-2 rounded-md hover-lift transition-colors text-sm text-left theme-text"
                           >
                             <LogOut className="h-4 w-4" />
                             <span>退出登录</span>
