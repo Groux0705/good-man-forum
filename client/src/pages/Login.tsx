@@ -109,12 +109,20 @@ const Login: React.FC = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
+                className={`w-full h-11 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 ${loading ? 'opacity-90 cursor-not-allowed' : ''}`}
               >
                 {loading ? (
                   <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
-                    <span>登录中...</span>
+                    <div className="relative">
+                      <div className="w-4 h-4 border-2 border-primary-foreground/20 rounded-full"></div>
+                      <div className="absolute inset-0 w-4 h-4 border-2 border-transparent border-t-primary-foreground rounded-full animate-spin"></div>
+                    </div>
+                    <span className="animate-pulse">登录中...</span>
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-1 bg-primary-foreground/60 rounded-full animate-pulse"></div>
+                      <div className="w-1 h-1 bg-primary-foreground/60 rounded-full animate-pulse delay-100"></div>
+                      <div className="w-1 h-1 bg-primary-foreground/60 rounded-full animate-pulse delay-200"></div>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-2">
@@ -148,13 +156,19 @@ const Login: React.FC = () => {
               
               <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
                 <span>登录即表示您同意我们的</span>
-                <button className="text-primary hover:text-primary/80 underline-offset-4 hover:underline">
+                <Link 
+                  to="/terms-of-service" 
+                  className="text-primary hover:text-primary/80 underline-offset-4 hover:underline transition-colors"
+                >
                   服务条款
-                </button>
+                </Link>
                 <span>和</span>
-                <button className="text-primary hover:text-primary/80 underline-offset-4 hover:underline">
+                <Link 
+                  to="/privacy-policy" 
+                  className="text-primary hover:text-primary/80 underline-offset-4 hover:underline transition-colors"
+                >
                   隐私政策
-                </button>
+                </Link>
               </div>
             </div>
           </CardContent>

@@ -19,6 +19,8 @@ import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import LessonLearning from './pages/LessonLearning';
 import AnimationDemo from './pages/AnimationDemo';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import './styles/theme.css';
 import './index.css';
 
@@ -56,6 +58,8 @@ function App() {
                     <Route path="/course/:id" element={<CourseDetail />} />
                     <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonLearning />} />
                     <Route path="/demo" element={<AnimationDemo />} />
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   </Routes>
                 </PageTransition>
               </main>
