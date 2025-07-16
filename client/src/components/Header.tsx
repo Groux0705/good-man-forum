@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, LogOut, Home, Layers, Settings, User, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/Button';
@@ -9,6 +9,7 @@ import ThemeSelector from './ThemeSelector';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
@@ -105,6 +106,7 @@ const Header: React.FC = () => {
                             onClick={() => {
                               logout();
                               setShowUserMenu(false);
+                              navigate('/login');
                             }}
                             className="w-full flex items-center space-x-3 px-3 py-2 rounded-md hover-lift transition-colors text-sm text-left theme-text"
                           >

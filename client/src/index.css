@@ -51,6 +51,22 @@
   }
 }
 
+@layer utilities {
+  /* 径向渐变背景 */
+  .bg-gradient-radial {
+    background: radial-gradient(circle, var(--tw-gradient-stops));
+  }
+  
+  /* 文本阴影效果 */
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

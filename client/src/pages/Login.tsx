@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, LogIn, ArrowRight, Sparkles } from 'lucide-react';
@@ -20,6 +20,20 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
 
+  // ESC 键关闭页面功能
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        navigate('/');
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [navigate]);
+
   const onSubmit = async (data: FormData) => {
     try {
       setLoading(true);
@@ -34,35 +48,41 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decorative elements */}
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden cursor-pointer"
+      onClick={() => navigate('/')}
+    >
+      {/* 聚焦光圈效果 */}
       <div className="absolute inset-0 w-full h-full">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-primary/15 rounded-full blur-2xl animate-pulse delay-500"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] bg-gradient-radial from-primary/15 via-primary/8 to-transparent rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] bg-gradient-radial from-primary/10 via-primary/5 to-transparent rounded-full blur-2xl animate-pulse delay-500"></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="text-center mb-8">
+      {/* 高亮聚焦内容区域 */}
+      <div 
+        className="w-full max-w-md relative z-10 transform hover:scale-105 transition-transform duration-300 cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/20 backdrop-blur-sm border border-primary/20">
-              <Sparkles className="w-8 h-8 text-primary" />
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/25 to-primary/15 backdrop-blur-xl border border-primary/20 shadow-xl shadow-primary/20">
+              <Sparkles className="w-8 h-8 text-primary animate-pulse" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">欢迎回来</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2 text-shadow">欢迎回来</h1>
           <p className="text-muted-foreground">登录到 Good Man Forum 继续您的精彩讨论</p>
         </div>
 
-        <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-2xl shadow-primary/5">
-          <CardHeader className="space-y-1 pb-6">
-            <CardTitle className="text-2xl font-semibold text-center flex items-center justify-center space-x-2">
+        <Card className="backdrop-blur-2xl bg-card/95 border border-primary/15 shadow-xl shadow-primary/15 hover:shadow-primary/25 transition-all duration-300">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-xl font-semibold text-center flex items-center justify-center space-x-2">
               <LogIn className="w-5 h-5 text-primary" />
               <span>登录账户</span>
             </CardTitle>
           </CardHeader>
           
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="username" className="text-sm font-medium text-foreground">
                   用户名或邮箱
@@ -71,7 +91,7 @@ const Login: React.FC = () => {
                   {...register('username', { required: '请输入用户名或邮箱' })}
                   type="text"
                   placeholder="输入您的用户名或邮箱"
-                  className="h-11 backdrop-blur-sm bg-background/50 border-border/50 focus:border-primary/50 focus:bg-background/80 transition-all duration-200"
+                  className="h-10 backdrop-blur-sm bg-background/70 border border-border/60 focus:border-primary/50 focus:bg-background/90 transition-all duration-300"
                   error={!!errors.username}
                 />
                 {errors.username && (
@@ -88,14 +108,14 @@ const Login: React.FC = () => {
                     {...register('password', { required: '请输入密码' })}
                     type={showPassword ? "text" : "password"}
                     placeholder="输入您的密码"
-                    className="h-11 pr-12 backdrop-blur-sm bg-background/50 border-border/50 focus:border-primary/50 focus:bg-background/80 transition-all duration-200"
+                    className="h-10 pr-10 backdrop-blur-sm bg-background/70 border border-border/60 focus:border-primary/50 focus:bg-background/90 transition-all duration-300"
                     error={!!errors.password}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 text-muted-foreground hover:text-foreground"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -109,7 +129,7 @@ const Login: React.FC = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className={`w-full h-11 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 ${loading ? 'opacity-90 cursor-not-allowed' : ''}`}
+                className={`w-full h-10 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 transform hover:scale-105 ${loading ? 'opacity-90 cursor-not-allowed' : ''}`}
               >
                 {loading ? (
                   <div className="flex items-center space-x-2">
@@ -136,14 +156,14 @@ const Login: React.FC = () => {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border/50"></div>
+                <div className="w-full border-t border-border/60"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-card/80 text-muted-foreground backdrop-blur-sm">或者</span>
+                <span className="px-4 bg-card/95 text-muted-foreground backdrop-blur-sm">或者</span>
               </div>
             </div>
 
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 还没有账户？{' '}
                 <Link 
@@ -177,6 +197,9 @@ const Login: React.FC = () => {
         <div className="mt-6 text-center">
           <p className="text-xs text-muted-foreground">
             © 2024 Good Man Forum. 构建美好的技术社区.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 opacity-75">
+            按 ESC 键或点击外部区域返回首页
           </p>
         </div>
       </div>
