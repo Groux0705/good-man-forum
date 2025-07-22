@@ -78,10 +78,18 @@ export const createReply = async (req: AuthRequest, res: Response) => {
               select: { id: true, username: true, avatar: true, level: true }
             }
           }
-        } : false
+        } : false,
+        topic: {
+          include: {
+            user: {
+              select: { id: true, username: true }
+            }
+          }
+        }
       }
     });
 
+    // 更新主题回复数和最后回复时间
     await prisma.topic.update({
       where: { id: topicId },
       data: { 
@@ -89,6 +97,66 @@ export const createReply = async (req: AuthRequest, res: Response) => {
         lastReply: new Date()
       }
     });
+
+    // 发送通知
+    try {
+      const { notificationService } = await import('../services/notificationService');
+      const replyAuthor = reply.user;
+      
+      // 如果是回复主题（不是回复评论）
+      if (!finalParentId) {
+        // 通知主题作者
+        if (reply.topic.user.id !== userId) {
+          await notificationService.createTopicReplyNotification(
+            reply.topic.user.id,
+            userId,
+            topicId,
+            reply.id,
+            reply.topic.title || '主题',
+            replyAuthor.username
+          );
+        }
+      } else {
+        // 如果是回复评论，先获取父评论的完整信息
+        const parentReply = await prisma.reply.findUnique({
+          where: { id: finalParentId },
+          include: {
+            user: {
+              select: { id: true, username: true }
+            }
+          }
+        });
+
+        if (parentReply) {
+          // 通知被回复的用户
+          if (parentReply.user.id !== userId) {
+            await notificationService.createCommentReplyNotification(
+              parentReply.user.id,
+              userId,
+              topicId,
+              reply.id,
+              finalParentId,
+              replyAuthor.username
+            );
+          }
+          
+          // 同时通知主题作者（如果不是回复者本人且不是被回复的用户）
+          if (reply.topic.user.id !== userId && reply.topic.user.id !== parentReply.user.id) {
+            await notificationService.createTopicReplyNotification(
+              reply.topic.user.id,
+              userId,
+              topicId,
+              reply.id,
+              reply.topic.title || '主题',
+              replyAuthor.username
+            );
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error('发送通知失败:', notificationError);
+      // 不影响回复创建的成功
+    }
 
     res.status(201).json({
       success: true,

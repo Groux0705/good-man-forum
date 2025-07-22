@@ -251,7 +251,14 @@ const addCourseComment = async (req: AuthRequest, res: express.Response) => {
     }
 
     // 验证课程是否存在
-    const course = await prisma.course.findUnique({ where: { id } });
+    const course = await prisma.course.findUnique({ 
+      where: { id },
+      include: {
+        user: {
+          select: { id: true, username: true }
+        }
+      }
+    });
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -271,6 +278,24 @@ const addCourseComment = async (req: AuthRequest, res: express.Response) => {
         }
       }
     });
+
+    // 发送通知给课程作者（如果不是自己评论自己的课程）
+    try {
+      if (course.userId !== userId) {
+        const { notificationService } = await import('../services/notificationService');
+        await notificationService.createCourseCommentNotification(
+          course.userId,
+          userId,
+          id,
+          comment.id,
+          course.title,
+          comment.user.username
+        );
+      }
+    } catch (notificationError) {
+      console.error('发送课程评论通知失败:', notificationError);
+      // 不影响评论创建的成功
+    }
 
     res.status(201).json({
       success: true,
@@ -322,7 +347,14 @@ const enrollCourse = async (req: AuthRequest, res: express.Response) => {
     const { id } = req.params;
     const userId = req.user!.id;
 
-    const course = await prisma.course.findUnique({ where: { id } });
+    const course = await prisma.course.findUnique({ 
+      where: { id },
+      include: {
+        user: {
+          select: { id: true, username: true }
+        }
+      }
+    });
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -348,6 +380,11 @@ const enrollCourse = async (req: AuthRequest, res: express.Response) => {
       data: {
         userId,
         courseId: id
+      },
+      include: {
+        user: {
+          select: { id: true, username: true }
+        }
       }
     });
 
@@ -356,6 +393,23 @@ const enrollCourse = async (req: AuthRequest, res: express.Response) => {
       where: { id },
       data: { enrollments: { increment: 1 } }
     });
+
+    // 发送通知给课程作者（如果不是自己报名自己的课程）
+    try {
+      if (course.userId !== userId) {
+        const { notificationService } = await import('../services/notificationService');
+        await notificationService.createCourseEnrollmentNotification(
+          course.userId,
+          userId,
+          id,
+          course.title,
+          enrollment.user.username
+        );
+      }
+    } catch (notificationError) {
+      console.error('发送课程报名通知失败:', notificationError);
+      // 不影响报名的成功
+    }
 
     res.status(201).json({
       success: true,

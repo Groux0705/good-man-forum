@@ -409,3 +409,171 @@ export const deleteTopic = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// 投票功能
+export const voteTopic = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { type } = req.body; // "up" or "down"
+    const userId = req.user!.id;
+
+    if (!type || (type !== 'up' && type !== 'down')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid vote type. Must be "up" or "down"'
+      });
+    }
+
+    // 检查主题是否存在
+    const topic = await prisma.topic.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { id: true, username: true }
+        }
+      }
+    });
+
+    if (!topic) {
+      return res.status(404).json({
+        success: false,
+        error: 'Topic not found'
+      });
+    }
+
+    // 检查是否已经投票
+    const existingVote = await prisma.vote.findUnique({
+      where: {
+        userId_topicId: {
+          userId,
+          topicId: id
+        }
+      }
+    });
+
+    let voteResult;
+    
+    if (existingVote) {
+      if (existingVote.type === type) {
+        // 如果投的是相同类型的票，则取消投票
+        await prisma.vote.delete({
+          where: {
+            userId_topicId: {
+              userId,
+              topicId: id
+            }
+          }
+        });
+        voteResult = { action: 'removed', type };
+      } else {
+        // 如果投的是不同类型的票，则更新投票
+        await prisma.vote.update({
+          where: {
+            userId_topicId: {
+              userId,
+              topicId: id
+            }
+          },
+          data: { type }
+        });
+        voteResult = { action: 'updated', type, previousType: existingVote.type };
+      }
+    } else {
+      // 创建新投票
+      await prisma.vote.create({
+        data: {
+          userId,
+          topicId: id,
+          type
+        }
+      });
+      voteResult = { action: 'created', type };
+    }
+
+    // 获取当前投票统计
+    const votes = await getVoteStats(id);
+
+    // 发送通知（如果是新投票且不是给自己投票）
+    if (voteResult.action === 'created' && topic.userId !== userId) {
+      const { notificationService } = await import('../services/notificationService');
+      const voter = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true }
+      });
+
+      await notificationService.createTopicVoteNotification(
+        topic.userId,
+        userId,
+        id,
+        type,
+        topic.title,
+        voter?.username || '匿名用户'
+      );
+    }
+
+    res.json({
+      success: true,
+      data: {
+        vote: voteResult,
+        stats: votes
+      }
+    });
+  } catch (error) {
+    console.error('Vote topic error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+};
+
+// 获取主题投票统计
+export const getTopicVotes = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // 检查主题是否存在
+    const topic = await prisma.topic.findUnique({
+      where: { id }
+    });
+
+    if (!topic) {
+      return res.status(404).json({
+        success: false,
+        error: 'Topic not found'
+      });
+    }
+
+    const votes = await getVoteStats(id);
+
+    res.json({
+      success: true,
+      data: votes
+    });
+  } catch (error) {
+    console.error('Get topic votes error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+};
+
+// 辅助函数：获取投票统计
+async function getVoteStats(topicId: string) {
+  const [upVotes, downVotes] = await Promise.all([
+    prisma.vote.count({
+      where: { topicId, type: 'up' }
+    }),
+    prisma.vote.count({
+      where: { topicId, type: 'down' }
+    })
+  ]);
+
+  return {
+    upVotes,
+    downVotes,
+    total: upVotes + downVotes,
+    score: upVotes - downVotes
+  };
+}

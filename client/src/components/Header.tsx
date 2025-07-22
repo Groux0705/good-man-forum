@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
 import SearchBox from './SearchBox';
 import ThemeSelector from './ThemeSelector';
+import { NotificationBell } from './NotificationBell';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -63,6 +64,9 @@ const Header: React.FC = () => {
           </div>
 
           <ThemeSelector />
+          
+          {/* 通知铃铛 - 仅在用户已登录时显示 */}
+          {user && <NotificationBell />}
 
           {user ? (
             <div className="flex items-center space-x-2 sm:space-x-3">

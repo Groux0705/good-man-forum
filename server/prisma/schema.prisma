@@ -23,6 +23,7 @@ model User {
   replies   Reply[]
   votes     Vote[]
   notifications Notification[]
+  pushSubscriptions PushSubscription[]
   courses   Course[]
   courseComments CourseComment[]
   enrollments CourseEnrollment[]  // 新增：用户课程报名关系
@@ -98,16 +99,34 @@ model Vote {
 }
 
 model Notification {
-  id      String  @id @default(cuid())
-  userId  String
-  title   String
-  content String
-  read    Boolean @default(false)
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "topic_reply", "comment_reply", "topic_vote", "comment_vote", "course_comment", "course_enrollment", "mention"
+  title     String
+  content   String
+  read      Boolean  @default(false)
+  data      String?  // JSON string with additional structured data (topic_id, course_id, reply_id, etc.)
+  actionUrl String?  // Deep link URL for the notification
   createdAt DateTime @default(now())
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@map("push_subscriptions")
 }
 
 model Course {
