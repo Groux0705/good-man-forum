@@ -244,8 +244,8 @@ const Courses: React.FC = () => {
               </div>
             </div>
 
-            {/* 课程卡片骨架 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {/* 课程卡片骨架 - 移动端优化 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {[...Array(12)].map((_, i) => (
                 <CourseCardSkeleton key={i} viewMode="grid" />
               ))}
@@ -258,16 +258,16 @@ const Courses: React.FC = () => {
 
   return (
     <PageTransition>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
-          {/* 页面标题和搜索 */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
-            <div className="mb-6 lg:mb-0">
-              <h1 className="text-4xl font-bold text-foreground mb-3">课程中心</h1>
-              <p className="text-lg text-muted-foreground">
+          {/* 页面标题和搜索 - 移动端优化 */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 sm:mb-8">
+            <div className="mb-4 sm:mb-6 lg:mb-0">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 sm:mb-3">课程中心</h1>
+              <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-3 sm:mb-4">
                 专业的男性情感成长课程内容，涵盖视频和文字多种形式，助你提升魅力和沟通技巧
               </p>
-              <div className="flex items-center space-x-4 mt-4 text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-muted-foreground">
                 <span className="flex items-center">
                   <BookOpen className="h-4 w-4 mr-1" />
                   {pagination.total || 0} 个课程
@@ -279,20 +279,20 @@ const Courses: React.FC = () => {
               </div>
             </div>
             
-            {/* 搜索和视图切换 */}
-            <div className="flex items-center space-x-4">
+            {/* 搜索和视图切换 - 移动端优化 */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <form onSubmit={handleSearch} className="flex">
-                <div className="relative">
+                <div className="relative flex-1 sm:flex-initial">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
                     placeholder="搜索课程..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-64 glass-input"
+                    className="pl-10 pr-4 py-2 w-full sm:w-64 glass-input text-sm sm:text-base"
                   />
                 </div>
-                <Button type="submit" variant="outline" size="sm" className="ml-2 button-glass">
+                <Button type="submit" variant="outline" size="sm" className="ml-2 button-glass touch-manipulation">
                   搜索
                 </Button>
               </form>
@@ -408,9 +408,9 @@ const Courses: React.FC = () => {
           {memoizedCourses.length > 0 ? (
             <div>
               <div className={`${viewMode === 'grid' 
-                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
-                : 'space-y-4'
-              } mb-8`}>
+                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6' 
+                : 'space-y-3 sm:space-y-4'
+              } mb-6 sm:mb-8`}>
                 {memoizedCourses.map((course, index) => (
                   <Link key={course.id} to={`/course/${course.id}`}>
                     <div className="stagger-item" style={{ animationDelay: `${index * 0.05}s` }}>

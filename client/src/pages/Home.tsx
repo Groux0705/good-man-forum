@@ -67,91 +67,100 @@ const Home: React.FC = () => {
 
   return (
     <PageTransition>
-      <div className="container mx-auto px-4 py-8">
-      <div className="flex gap-8">
-        <main className="flex-1">
-          <div className="mb-8">
-            <Card className="border-0 theme-card" style={{ background: 'linear-gradient(to right, var(--color-primary-100), var(--color-primary-50))' }}>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Flame className="h-6 w-6 theme-primary" />
-                  <span className="theme-text">最新主题</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="theme-text-secondary">
-                  发现社区中最新的讨论话题，参与有趣的对话
-                </p>
-                <div className="flex items-center space-x-4 mt-4">
-                  <Badge variant="secondary" className="flex items-center space-x-1">
-                    <TrendingUp className="h-3 w-3" />
-                    <span>共 {pagination.total} 个主题</span>
-                  </Badge>
-                  <Badge variant="outline">
-                    活跃社区
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {loading ? (
-            <LoadingSkeleton />
-          ) : (
-            <>
-              <TopicList topics={topics} />
-              
-              {pagination.pages > 1 && (
-                <div className="mt-8 flex justify-center">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchTopics(page - 1)}
-                      disabled={page <= 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      上一页
-                    </Button>
-                    
-                    <div className="flex items-center space-x-1">
-                      {[...Array(Math.min(5, pagination.pages))].map((_, i) => {
-                        const pageNum = Math.max(1, page - 2) + i;
-                        if (pageNum > pagination.pages) return null;
-                        
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={pageNum === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => fetchTopics(pageNum)}
-                            className="min-w-[40px]"
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchTopics(page + 1)}
-                      disabled={page >= pagination.pages}
-                    >
-                      下一页
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* 主内容区域 - 移动端优化 */}
+          <main className="flex-1 min-w-0">
+            {/* 头部卡片 - 移动端优化 */}
+            <div className="mb-6 sm:mb-8">
+              <Card className="border-0 theme-card" style={{ background: 'linear-gradient(to right, var(--color-primary-100), var(--color-primary-50))' }}>
+                <CardHeader className="px-4 sm:px-6 py-4 sm:py-6">
+                  <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                    <Flame className="h-5 w-5 sm:h-6 sm:w-6 theme-primary" />
+                    <span className="theme-text">最新主题</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                  <p className="theme-text-secondary text-sm sm:text-base">
+                    发现社区中最新的讨论话题，参与有趣的对话
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 mt-3 sm:mt-4">
+                    <Badge variant="secondary" className="flex items-center space-x-1 text-xs sm:text-sm">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>共 {pagination.total} 个主题</span>
+                    </Badge>
+                    <Badge variant="outline" className="text-xs sm:text-sm">
+                      活跃社区
+                    </Badge>
                   </div>
-                </div>
-              )}
-            </>
-          )}
-        </main>
+                </CardContent>
+              </Card>
+            </div>
 
-        <Sidebar />
+            {loading ? (
+              <LoadingSkeleton />
+            ) : (
+              <>
+                <TopicList topics={topics} />
+                
+                {/* 分页组件 - 移动端优化 */}
+                {pagination.pages > 1 && (
+                  <div className="mt-6 sm:mt-8 flex justify-center px-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto pb-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchTopics(page - 1)}
+                        disabled={page <= 1}
+                        className="flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 touch-manipulation"
+                      >
+                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline ml-1">上一页</span>
+                      </Button>
+                      
+                      {/* 页码按钮 - 移动端优化 */}
+                      <div className="flex items-center space-x-1 min-w-0">
+                        {[...Array(Math.min(window.innerWidth < 640 ? 3 : 5, pagination.pages))].map((_, i) => {
+                          const pageNum = Math.max(1, page - (window.innerWidth < 640 ? 1 : 2)) + i;
+                          if (pageNum > pagination.pages) return null;
+                          
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={pageNum === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => fetchTopics(pageNum)}
+                              className="min-w-[32px] sm:min-w-[40px] h-8 sm:h-9 text-xs sm:text-sm touch-manipulation flex-shrink-0"
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchTopics(page + 1)}
+                        disabled={page >= pagination.pages}
+                        className="flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 touch-manipulation"
+                      >
+                        <span className="hidden sm:inline mr-1">下一页</span>
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+
+          {/* 侧边栏 - 移动端优化 */}
+          <div className="lg:w-80 lg:flex-shrink-0">
+            <Sidebar />
+          </div>
+        </div>
       </div>
-    </div>
     </PageTransition>
   );
 };
