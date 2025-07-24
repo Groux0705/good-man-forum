@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { User, Calendar, MessageSquare, FileText, MapPin } from 'lucide-react';
+import { User, Calendar, MessageSquare, FileText, MapPin, Heart, Bookmark } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Topic, Reply } from '../types';
+import { topicInteractionService } from '../services/topicInteractions';
 
 interface UserProfile {
   id: string;
@@ -23,6 +24,8 @@ interface UserProfile {
 interface UserContentResponse {
   topics?: Topic[];
   replies?: Reply[];
+  likedTopics?: Topic[];
+  favoriteTopics?: Topic[];
   pagination: {
     page: number;
     limit: number;
@@ -34,7 +37,7 @@ interface UserContentResponse {
 const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'topics' | 'replies'>('topics');
+  const [activeTab, setActiveTab] = useState<'topics' | 'replies' | 'liked' | 'favorites'>('topics');
   const [content, setContent] = useState<UserContentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentLoading, setContentLoading] = useState(false);
@@ -60,13 +63,23 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const fetchUserContent = async (type: 'topics' | 'replies', page = 1) => {
+  const fetchUserContent = async (type: 'topics' | 'replies' | 'liked' | 'favorites', page = 1) => {
     try {
       setContentLoading(true);
-      const response = await fetch(`/api/users/${id}/${type}?page=${page}&limit=10`);
-      if (response.ok) {
-        const data = await response.json();
-        setContent(data.data);
+      let response;
+      
+      if (type === 'liked') {
+        const data = await topicInteractionService.getUserLikedTopics(page, 10);
+        setContent({ likedTopics: data.topics, pagination: data.pagination });
+      } else if (type === 'favorites') {
+        const data = await topicInteractionService.getUserFavoriteTopics(page, 10);
+        setContent({ favoriteTopics: data.topics, pagination: data.pagination });
+      } else {
+        response = await fetch(`/api/users/${id}/${type}?page=${page}&limit=10`);
+        if (response.ok) {
+          const data = await response.json();
+          setContent(data.data);
+        }
       }
     } catch (error) {
       console.error(`Failed to fetch user ${type}:`, error);
@@ -75,7 +88,7 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleTabChange = (tab: 'topics' | 'replies') => {
+  const handleTabChange = (tab: 'topics' | 'replies' | 'liked' | 'favorites') => {
     setActiveTab(tab);
     fetchUserContent(tab);
   };
@@ -186,28 +199,52 @@ const UserProfile: React.FC = () => {
         </Card>
 
         {/* 内容选项卡 */}
-        <div className="flex space-x-1 bg-muted/20 p-1 rounded-lg border">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1 bg-muted/20 p-1 rounded-lg border">
           <button
             onClick={() => handleTabChange('topics')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all duration-200 ${
+            className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
               activeTab === 'topics'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <FileText className="h-4 w-4" />
-            <span>主题 ({user.topicsCount})</span>
+            <span className="hidden sm:inline">主题</span>
+            <span className="text-xs">({user.topicsCount})</span>
           </button>
           <button
             onClick={() => handleTabChange('replies')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all duration-200 ${
+            className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
               activeTab === 'replies'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <MessageSquare className="h-4 w-4" />
-            <span>回复 ({user.repliesCount})</span>
+            <span className="hidden sm:inline">回复</span>
+            <span className="text-xs">({user.repliesCount})</span>
+          </button>
+          <button
+            onClick={() => handleTabChange('liked')}
+            className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
+              activeTab === 'liked'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Heart className="h-4 w-4" />
+            <span className="hidden sm:inline">点赞</span>
+          </button>
+          <button
+            onClick={() => handleTabChange('favorites')}
+            className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
+              activeTab === 'favorites'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Bookmark className="h-4 w-4" />
+            <span className="hidden sm:inline">收藏</span>
           </button>
         </div>
 
@@ -220,10 +257,20 @@ const UserProfile: React.FC = () => {
                   <FileText className="h-5 w-5" />
                   <span>用户主题</span>
                 </>
-              ) : (
+              ) : activeTab === 'replies' ? (
                 <>
                   <MessageSquare className="h-5 w-5" />
                   <span>用户回复</span>
+                </>
+              ) : activeTab === 'liked' ? (
+                <>
+                  <Heart className="h-5 w-5" />
+                  <span>点赞主题</span>
+                </>
+              ) : (
+                <>
+                  <Bookmark className="h-5 w-5" />
+                  <span>收藏主题</span>
                 </>
               )}
             </CardTitle>
@@ -238,7 +285,12 @@ const UserProfile: React.FC = () => {
                   </div>
                 ))}
               </div>
-            ) : content && (activeTab === 'topics' ? content.topics : content.replies)?.length ? (
+            ) : content && (
+              (activeTab === 'topics' && content.topics?.length) ||
+              (activeTab === 'replies' && content.replies?.length) ||
+              (activeTab === 'liked' && content.likedTopics?.length) ||
+              (activeTab === 'favorites' && content.favoriteTopics?.length)
+            ) ? (
               <div className="space-y-4">
                 {activeTab === 'topics' && content.topics?.map((topic) => (
                   <div key={topic.id} className="border-b border-border last:border-b-0 pb-4 last:pb-0">
@@ -265,6 +317,22 @@ const UserProfile: React.FC = () => {
                             <MessageSquare className="h-3 w-3" />
                             <span>{topic.replies} 回复</span>
                           </div>
+                          {(topic.likes > 0 || topic.favorites > 0) && (
+                            <div className="flex items-center space-x-2">
+                              {topic.likes > 0 && (
+                                <div className="flex items-center space-x-1">
+                                  <Heart className="h-3 w-3" />
+                                  <span>{topic.likes}</span>
+                                </div>
+                              )}
+                              {topic.favorites > 0 && (
+                                <div className="flex items-center space-x-1">
+                                  <Bookmark className="h-3 w-3" />
+                                  <span>{topic.favorites}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -288,6 +356,55 @@ const UserProfile: React.FC = () => {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {formatDate(reply.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {(activeTab === 'liked' || activeTab === 'favorites') && (
+                  activeTab === 'liked' ? content.likedTopics : content.favoriteTopics
+                )?.map((topic) => (
+                  <div key={topic.id} className="border-b border-border last:border-b-0 pb-4 last:pb-0">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          to={`/topic/${topic.id}`}
+                          className="text-lg font-medium text-foreground hover:text-primary transition-colors overflow-hidden h-14 leading-7 block"
+                        >
+                          {topic.title}
+                        </Link>
+                        <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <MapPin className="h-3 w-3" />
+                            <Link
+                              to={`/node/${topic.node?.name}`}
+                              className="hover:text-foreground transition-colors"
+                            >
+                              {topic.node?.title}
+                            </Link>
+                          </div>
+                          <span>{formatDate(topic.createdAt)}</span>
+                          <div className="flex items-center space-x-1">
+                            <MessageSquare className="h-3 w-3" />
+                            <span>{topic.replies} 回复</span>
+                          </div>
+                          {(topic.likes > 0 || topic.favorites > 0) && (
+                            <div className="flex items-center space-x-2">
+                              {topic.likes > 0 && (
+                                <div className="flex items-center space-x-1">
+                                  <Heart className="h-3 w-3" />
+                                  <span>{topic.likes}</span>
+                                </div>
+                              )}
+                              {topic.favorites > 0 && (
+                                <div className="flex items-center space-x-1">
+                                  <Bookmark className="h-3 w-3" />
+                                  <span>{topic.favorites}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -320,10 +437,20 @@ const UserProfile: React.FC = () => {
                       <FileText className="h-12 w-12 mx-auto mb-4" />
                       <p>该用户还没有发布过主题</p>
                     </>
-                  ) : (
+                  ) : activeTab === 'replies' ? (
                     <>
                       <MessageSquare className="h-12 w-12 mx-auto mb-4" />
                       <p>该用户还没有发表过回复</p>
+                    </>
+                  ) : activeTab === 'liked' ? (
+                    <>
+                      <Heart className="h-12 w-12 mx-auto mb-4" />
+                      <p>该用户还没有点赞过主题</p>
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="h-12 w-12 mx-auto mb-4" />
+                      <p>该用户还没有收藏过主题</p>
                     </>
                   )}
                 </div>
