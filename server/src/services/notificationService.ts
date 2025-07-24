@@ -252,6 +252,40 @@ class NotificationService {
     });
   }
 
+  async createTopicLikeNotification(topicAuthorId: string, likeUserId: string, topicId: string, topicTitle: string, likeUsername: string) {
+    if (topicAuthorId === likeUserId) return; // 不给自己发通知
+
+    return this.createNotification({
+      userId: topicAuthorId,
+      type: 'topic_like',
+      title: '有人点赞了你的主题',
+      content: `${likeUsername} 点赞了你的主题《${topicTitle}》`,
+      data: {
+        topicId,
+        fromUserId: likeUserId,
+        fromUsername: likeUsername
+      },
+      actionUrl: `/topic/${topicId}`
+    });
+  }
+
+  async createTopicFavoriteNotification(topicAuthorId: string, favoriteUserId: string, topicId: string, topicTitle: string, favoriteUsername: string) {
+    if (topicAuthorId === favoriteUserId) return; // 不给自己发通知
+
+    return this.createNotification({
+      userId: topicAuthorId,
+      type: 'topic_favorite',
+      title: '有人收藏了你的主题',
+      content: `${favoriteUsername} 收藏了你的主题《${topicTitle}》`,
+      data: {
+        topicId,
+        fromUserId: favoriteUserId,
+        fromUsername: favoriteUsername
+      },
+      actionUrl: `/topic/${topicId}`
+    });
+  }
+
   // 实时推送通知 (后续可以扩展为WebSocket/SSE)
   private sendRealtimeNotification(notification: any) {
     // TODO: 实现WebSocket推送

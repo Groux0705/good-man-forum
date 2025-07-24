@@ -22,6 +22,8 @@ model User {
   topics    Topic[]
   replies   Reply[]
   votes     Vote[]
+  topicLikes TopicLike[]
+  topicFavorites TopicFavorite[]
   notifications Notification[]
   pushSubscriptions PushSubscription[]
   courses   Course[]
@@ -55,6 +57,8 @@ model Topic {
   nodeId     String
   replies    Int      @default(0)     // 回复数量
   clicks     Int      @default(0)     // 点击数
+  likes      Int      @default(0)     // 点赞数
+  favorites  Int      @default(0)     // 收藏数
   lastReply  DateTime @default(now())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -63,6 +67,8 @@ model Topic {
   node       Node     @relation(fields: [nodeId], references: [id])
   replyList  Reply[]
   votes      Vote[]
+  topicLikes TopicLike[]
+  topicFavorites TopicFavorite[]
 
   @@map("topics")
 }
@@ -101,7 +107,7 @@ model Vote {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // "topic_reply", "comment_reply", "topic_vote", "comment_vote", "course_comment", "course_enrollment", "mention"
+  type      String   // "topic_reply", "comment_reply", "topic_vote", "comment_vote", "course_comment", "course_enrollment", "mention", "topic_like", "topic_favorite"
   title     String
   content   String
   read      Boolean  @default(false)
@@ -274,4 +280,32 @@ model LessonProgress {
   
   @@unique([userId, lessonId])
   @@map("lesson_progress")
+}
+
+// 新增：主题点赞模型
+model TopicLike {
+  id       String   @id @default(cuid())
+  userId   String
+  topicId  String
+  createdAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@map("topic_likes")
+}
+
+// 新增：主题收藏模型
+model TopicFavorite {
+  id       String   @id @default(cuid())
+  userId   String
+  topicId  String
+  createdAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@map("topic_favorites")
 }

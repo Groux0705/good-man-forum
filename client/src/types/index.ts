@@ -28,6 +28,8 @@ export interface Topic {
   nodeId: string;
   replies: number;
   clicks: number;
+  likes: number;
+  favorites: number;
   lastReply: string;
   createdAt: string;
   user?: User;

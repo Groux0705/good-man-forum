@@ -13,6 +13,7 @@ import replyRoutes from './routes/replies';
 import uploadRoutes from './routes/upload';
 import courseRoutes from './routes/courses';
 import notificationRoutes from './routes/notifications';
+import topicInteractionRoutes from './routes/topicInteractions';
 
 dotenv.config();
 
@@ -48,6 +49,7 @@ app.use('/api/replies', replyRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/topic-interactions', topicInteractionRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {

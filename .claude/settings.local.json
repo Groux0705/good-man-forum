@@ -33,7 +33,9 @@
       "Bash(grep -n \"animate-slide-up\" CourseDetail.tsx)",
       "Bash(kill:*)",
       "Bash(pm2 restart:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

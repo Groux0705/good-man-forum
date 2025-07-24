@@ -6,6 +6,7 @@ import { formatRelativeTime } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
 import ReplyList from '../components/ReplyList';
 import ReplyForm from '../components/ReplyForm';
+import { TopicActions } from '../components/TopicActions';
 
 const TopicDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -199,6 +200,15 @@ const TopicDetail: React.FC = () => {
                   </div>
                   <div className="prose prose-sm max-w-none">
                     <p className="theme-text whitespace-pre-wrap">{topic.content}</p>
+                  </div>
+                  
+                  {/* 点赞和收藏操作 */}
+                  <div className="mt-6 pt-4 border-t theme-border">
+                    <TopicActions 
+                      topicId={topic.id}
+                      initialLikes={topic.likes}
+                      initialFavorites={topic.favorites}
+                    />
                   </div>
                 </div>
               </div>
