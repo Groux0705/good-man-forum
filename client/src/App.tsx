@@ -25,6 +25,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import UserManagement from './pages/admin/UserManagement';
+import AppealsManagement from './pages/admin/AppealsManagement';
 import TopicManagement from './pages/admin/TopicManagement';
 import NodeManagement from './pages/admin/NodeManagement';
 import ReportManagement from './pages/admin/ReportManagement';
@@ -90,6 +91,7 @@ function AppContent() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="users" element={<UserManagement />} />
+              <Route path="appeals" element={<AppealsManagement />} />
               <Route path="topics" element={<TopicManagement />} />
               <Route path="nodes" element={<NodeManagement />} />
               <Route path="reports" element={<ReportManagement />} />

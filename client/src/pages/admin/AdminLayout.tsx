@@ -10,7 +10,8 @@ import {
   Settings,
   Menu,
   X,
-  LogOut
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -73,6 +74,7 @@ const AdminLayout: React.FC = () => {
   const navigation = [
     { name: '仪表板', href: '/admin', icon: LayoutDashboard },
     { name: '用户管理', href: '/admin/users', icon: Users },
+    { name: '申诉管理', href: '/admin/appeals', icon: MessageSquare },
     { name: '主题管理', href: '/admin/topics', icon: FileText },
     { name: '节点管理', href: '/admin/nodes', icon: FolderTree },
     { name: '举报处理', href: '/admin/reports', icon: AlertTriangle },

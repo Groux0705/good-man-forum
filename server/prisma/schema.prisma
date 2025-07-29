@@ -18,7 +18,18 @@ model User {
   balance   Int      @default(100)  // 用户积分/金币
   level     Int      @default(1)    // 用户等级
   experience Int     @default(0)    // 经验值
-  status    String   @default("active") // 用户状态: active, banned, suspended
+  status    String   @default("active") // 用户状态: active, banned, suspended, reviewing, muted
+  phone     String? // 手机号
+  realName  String? // 实名信息
+  idCard    String? // 身份证号
+  trustScore Int     @default(100) // 信用分数 0-100
+  violationCount Int @default(0) // 违规次数
+  lastActiveAt DateTime @default(now()) // 最后活跃时间
+  registrationIp String? // 注册IP
+  lastLoginIp String? // 最后登录IP
+  deviceFingerprint String? // 设备指纹
+  emailVerified Boolean @default(false) // 邮箱验证状态
+  phoneVerified Boolean @default(false) // 手机验证状态
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -40,6 +51,9 @@ model User {
   adminLogs    AdminLog[]          // 管理员操作日志
   reports      Report[] @relation("UserReports")      // 用户举报
   handledReports Report[] @relation("AdminHandledReports") // 管理员处理的举报
+  punishments  UserPunishment[]    // 用户处罚记录
+  appeals      UserAppeal[]        // 用户申诉记录
+  loginLogs    UserLoginLog[]      // 登录日志
 
   @@map("users")
 }
@@ -536,4 +550,104 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
   
   @@map("system_settings")
+}
+
+// 用户处罚记录
+model UserPunishment {
+  id        String   @id @default(cuid())
+  userId    String   // 被处罚用户ID
+  adminId   String   // 执行处罚的管理员ID
+  type      String   // 处罚类型: ban, mute, warning, suspend
+  reason    String   // 处罚原因
+  details   String?  // 详细信息(JSON格式)
+  duration  Int?     // 处罚时长(分钟，null表示永久)
+  startTime DateTime @default(now()) // 处罚开始时间
+  endTime   DateTime? // 处罚结束时间
+  status    String   @default("active") // 状态: active, expired, revoked
+  evidence  String?  // 证据(JSON格式，包含截图链接等)
+  severity  Int      @default(1) // 严重程度 1-5
+  
+  // 关联关系
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("user_punishments")
+}
+
+// 用户申诉记录
+model UserAppeal {
+  id          String   @id @default(cuid())
+  userId      String   // 申诉用户ID
+  punishmentId String? // 关联的处罚记录ID（可选）
+  type        String   // 申诉类型: punishment_appeal, account_recovery, content_appeal
+  title       String   // 申诉标题
+  content     String   // 申诉内容
+  evidence    String?  // 申诉证据(JSON格式)
+  status      String   @default("pending") // 状态: pending, processing, approved, rejected, closed
+  adminId     String?  // 处理的管理员ID
+  adminNote   String?  // 管理员备注
+  handledAt   DateTime? // 处理时间
+  priority    String   @default("normal") // 优先级: low, normal, high, urgent
+  
+  // 关联关系
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("user_appeals")
+}
+
+// 用户登录日志
+model UserLoginLog {
+  id              String   @id @default(cuid())
+  userId          String   // 用户ID
+  ip              String   // 登录IP
+  userAgent       String?  // 用户代理
+  deviceFingerprint String? // 设备指纹
+  location        String?  // 地理位置
+  success         Boolean  // 是否成功
+  failReason      String?  // 失败原因
+  
+  // 关联关系
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@map("user_login_logs")
+}
+
+// 用户操作日志
+model UserActionLog {
+  id        String   @id @default(cuid())
+  userId    String   // 用户ID
+  action    String   // 操作类型: login, logout, post, reply, vote, etc.
+  resource  String   // 操作对象: topic, reply, user, etc.
+  resourceId String? // 操作对象ID
+  details   String?  // 操作详情(JSON格式)
+  ip        String   // 操作IP
+  userAgent String?  // 用户代理
+  
+  createdAt DateTime @default(now())
+  
+  @@map("user_action_logs")
+}
+
+// 批量操作记录
+model BatchOperation {
+  id        String   @id @default(cuid())
+  adminId   String   // 执行操作的管理员ID
+  type      String   // 操作类型: batch_ban, batch_mute, batch_delete
+  targets   String   // 目标用户ID列表(JSON格式)
+  params    String   // 操作参数(JSON格式)
+  status    String   @default("pending") // 状态: pending, processing, completed, failed
+  progress  Int      @default(0) // 进度百分比
+  result    String?  // 执行结果(JSON格式)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("batch_operations")
 }

@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest, authenticate } from '../middleware/auth';
+import { checkBanStatus, checkMuteStatus } from '../middleware/punishmentCheck';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -668,10 +669,10 @@ router.get('/', getCourses);
 router.get('/:id', getCourse);
 router.get('/:id/progress', authenticate, getCourseProgress);
 router.get('/:courseId/lessons/:lessonId', getLesson);
-router.post('/', authenticate, createCourse);
-router.post('/:id/comments', authenticate, addCourseComment);
-router.post('/:id/like', authenticate, likeCourse);
-router.post('/:id/enroll', authenticate, enrollCourse);
+router.post('/', authenticate, checkBanStatus, checkMuteStatus, createCourse);
+router.post('/:id/comments', authenticate, checkBanStatus, checkMuteStatus, addCourseComment);
+router.post('/:id/like', authenticate, checkBanStatus, likeCourse);
+router.post('/:id/enroll', authenticate, checkBanStatus, enrollCourse);
 router.post('/:courseId/lessons/:lessonId/progress', authenticate, updateLessonProgress);
 
 export default router;

@@ -32,9 +32,14 @@ router.post('/topics/batch', topicsController.batchUpdateTopics);
 router.get('/users', usersController.getUsers);
 router.get('/users/stats', usersController.getUserStats);
 router.get('/users/:id', usersController.getUserDetail);
-router.put('/users/:id/status', usersController.updateUserStatus);
-router.put('/users/:id/role', requireSuperAdmin, usersController.updateUserRole); // 只有超级管理员可以修改角色
-router.post('/users/batch', usersController.batchUpdateUsers);
+router.post('/users/:id/punish', usersController.punishUser);
+router.put('/punishments/:punishmentId/revoke', usersController.revokePunishment);
+router.post('/users/batch', usersController.batchOperation);
+router.get('/batch-operations/:operationId', usersController.getBatchOperationStatus);
+
+// 用户申诉路由
+router.get('/appeals', usersController.getUserAppeals);
+router.put('/appeals/:appealId/handle', usersController.handleAppeal);
 
 // 节点管理路由
 router.get('/nodes', nodesController.getNodes);

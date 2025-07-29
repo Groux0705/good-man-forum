@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 import { generalLimiter } from './middleware/rateLimiter';
+import { startPunishmentCleanupJob } from './middleware/punishmentCheck';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import nodeRoutes from './routes/nodes';
@@ -77,6 +78,9 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // 启动处罚清理定时任务
+  startPunishmentCleanupJob();
 });
 
 export default app;
