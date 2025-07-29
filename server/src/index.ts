@@ -18,6 +18,7 @@ import pointRoutes from './routes/points';
 import badgeRoutes from './routes/badges';
 import dailyTaskRoutes from './routes/dailyTasks';
 import specialTagRoutes from './routes/specialTags';
+import adminRoutes from './routes/admin';
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use('/api/points', pointRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/daily-tasks', dailyTaskRoutes);
 app.use('/api/special-tags', specialTagRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {

@@ -22,6 +22,14 @@ import Leaderboard from './pages/Leaderboard';
 import AnimationDemo from './pages/AnimationDemo';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import AdminLayout from './pages/admin/AdminLayout';
+import Dashboard from './pages/admin/Dashboard';
+import UserManagement from './pages/admin/UserManagement';
+import TopicManagement from './pages/admin/TopicManagement';
+import NodeManagement from './pages/admin/NodeManagement';
+import ReportManagement from './pages/admin/ReportManagement';
+import LogsManagement from './pages/admin/LogsManagement';
+import Settings from './pages/admin/Settings';
 import './styles/theme.css';
 import './index.css';
 
@@ -77,6 +85,17 @@ function AppContent() {
             <Route path="/demo" element={<AnimationDemo />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="topics" element={<TopicManagement />} />
+              <Route path="nodes" element={<NodeManagement />} />
+              <Route path="reports" element={<ReportManagement />} />
+              <Route path="logs" element={<LogsManagement />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
           </Routes>
         </PageTransition>
       </main>

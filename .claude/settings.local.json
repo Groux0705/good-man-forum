@@ -37,7 +37,12 @@
       "Bash(git add:*)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(npx playwright:*)",
+      "Bash(npm:*)",
+      "Bash(nvm:*)",
+      "Bash(brew:*)",
+      "Bash(export:*)"
     ],
     "deny": []
   }

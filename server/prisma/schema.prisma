@@ -14,9 +14,11 @@ model User {
   password  String
   avatar    String?
   bio       String?
+  role      String   @default("user") // 用户角色: user, moderator, admin
   balance   Int      @default(100)  // 用户积分/金币
   level     Int      @default(1)    // 用户等级
   experience Int     @default(0)    // 经验值
+  status    String   @default("active") // 用户状态: active, banned, suspended
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -35,6 +37,9 @@ model User {
   badges       UserBadge[]         // 新增：用户勋章
   dailyTasks   DailyTaskProgress[] // 新增：每日任务进度
   specialTags  UserSpecialTag[]    // 新增：专属标识
+  adminLogs    AdminLog[]          // 管理员操作日志
+  reports      Report[] @relation("UserReports")      // 用户举报
+  handledReports Report[] @relation("AdminHandledReports") // 管理员处理的举报
 
   @@map("users")
 }
@@ -60,6 +65,7 @@ model Topic {
   content    String
   userId     String
   nodeId     String
+  status     String   @default("published") // 主题状态: published, hidden, deleted
   replies    Int      @default(0)     // 回复数量
   clicks     Int      @default(0)     // 点击数
   likes      Int      @default(0)     // 点赞数
@@ -474,4 +480,60 @@ model UserSpecialTag {
   
   @@unique([userId, tagId])
   @@map("user_special_tags")
+}
+
+// 管理员操作日志
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String   // 管理员ID
+  action    String   // 操作类型: CREATE, UPDATE, DELETE, BAN, UNBAN等
+  resource  String   // 操作对象: user, topic, reply, node等
+  resourceId String? // 操作对象ID
+  details   String?  // 操作详情(JSON格式)
+  ipAddress String?  // 操作IP地址
+  userAgent String?  // 用户代理
+  
+  // 关联关系
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@map("admin_logs")
+}
+
+// 举报系统
+model Report {
+  id        String   @id @default(cuid())
+  reporterId String  // 举报人ID
+  type      String   // 举报类型: topic, reply, user
+  targetId  String   // 被举报对象ID
+  reason    String   // 举报原因
+  category  String   // 举报分类: spam, harassment, inappropriate等
+  status    String   @default("pending") // 状态: pending, resolved, dismissed
+  adminNote String?  // 管理员备注
+  handlerId String?  // 处理管理员ID
+  handledAt DateTime? // 处理时间
+  
+  // 关联关系
+  reporter  User     @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  handler   User?    @relation("AdminHandledReports", fields: [handlerId], references: [id], onDelete: SetNull)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("reports")
+}
+
+// 系统设置
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // 设置键名
+  value     String   // 设置值(JSON格式)
+  category  String   // 设置分类: general, security, notification等
+  description String? // 设置描述
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("system_settings")
 }
