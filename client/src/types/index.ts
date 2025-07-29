@@ -6,6 +6,26 @@ export interface User {
   bio?: string;
   balance: number;
   level: number;
+  experience?: number;
+  createdAt: string;
+}
+
+export interface LevelInfo {
+  title: string;
+  badge: string;
+  privileges: string[];
+  progress: number;
+  nextLevelExp: number | null;
+  currentLevelExp: number;
+}
+
+export interface PointHistory {
+  id: string;
+  amount: number;
+  type: string;
+  reason: string;
+  relatedId?: string;
+  relatedType?: string;
   createdAt: string;
 }
 
