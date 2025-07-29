@@ -53,6 +53,7 @@ const Courses: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearchTerm, setActiveSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [pagination, setPagination] = useState({
     page: 1,
@@ -83,7 +84,7 @@ const Courses: React.FC = () => {
     { id: 'likes', name: '点赞数', icon: Heart }
   ], []);
 
-  const fetchCourses = useCallback(async (page = 1, showLoading = true) => {
+  const fetchCourses = useCallback(async (page = 1, showLoading = true, searchQuery = activeSearchTerm) => {
     try {
       if (showLoading) {
         setLoading(true);
@@ -96,7 +97,7 @@ const Courses: React.FC = () => {
         limit: '12',
         ...(category !== 'all' && { category }),
         ...(sortBy && { sort: sortBy }),
-        ...(searchTerm && { search: searchTerm })
+        ...(searchQuery && { search: searchQuery })
       });
       
       const response = await fetch(`/api/courses?${params}`);
@@ -126,7 +127,7 @@ const Courses: React.FC = () => {
       setLoading(false);
       setIsFiltering(false);
     }
-  }, [category, sortBy, searchTerm]);
+  }, [category, sortBy, activeSearchTerm]);
 
   useEffect(() => {
     fetchCourses(1, true);
@@ -161,8 +162,9 @@ const Courses: React.FC = () => {
 
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    fetchCourses(1, false);
-  }, [fetchCourses]);
+    setActiveSearchTerm(searchTerm);
+    fetchCourses(1, false, searchTerm);
+  }, [fetchCourses, searchTerm]);
 
   const formatViews = useCallback((views: number) => {
     if (views >= 1000000) {
@@ -289,10 +291,10 @@ const Courses: React.FC = () => {
                     placeholder="搜索课程..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full sm:w-64 glass-input text-sm sm:text-base"
+                    className="pl-10 pr-4 py-2 w-full sm:w-64 text-sm sm:text-base"
                   />
                 </div>
-                <Button type="submit" variant="outline" size="sm" className="ml-2 button-glass touch-manipulation">
+                <Button type="submit" variant="outline" size="sm" className="ml-2 touch-manipulation">
                   搜索
                 </Button>
               </form>
@@ -302,7 +304,9 @@ const Courses: React.FC = () => {
                   variant={viewMode === 'grid' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
-                  className="button-glass transition-all duration-200"
+                  className={`transition-all duration-200 ${
+                    viewMode === 'grid' ? '' : 'button-glass'
+                  }`}
                 >
                   <Grid className="h-4 w-4" />
                 </Button>
@@ -310,7 +314,9 @@ const Courses: React.FC = () => {
                   variant={viewMode === 'list' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className="button-glass transition-all duration-200"
+                  className={`transition-all duration-200 ${
+                    viewMode === 'list' ? '' : 'button-glass'
+                  }`}
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -332,7 +338,9 @@ const Courses: React.FC = () => {
                     variant={category === cat.id ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleCategoryChange(cat.id)}
-                    className="flex items-center space-x-2 button-glass transition-all duration-200 hover:scale-105"
+                    className={`flex items-center space-x-2 transition-all duration-200 hover:scale-105 ${
+                      category === cat.id ? '' : 'button-glass'
+                    }`}
                     disabled={isFiltering}
                   >
                     <IconComponent className="h-3 w-3" />
@@ -357,7 +365,9 @@ const Courses: React.FC = () => {
                       variant={type === option.id ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleTypeChange(option.id)}
-                      className="flex items-center space-x-1 button-glass transition-all duration-200 hover:scale-105"
+                      className={`flex items-center space-x-1 transition-all duration-200 hover:scale-105 ${
+                        type === option.id ? '' : 'button-glass'
+                      }`}
                       disabled={isFiltering}
                     >
                       <IconComponent className="h-3 w-3" />
@@ -380,7 +390,9 @@ const Courses: React.FC = () => {
                       variant={sortBy === option.id ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleSortChange(option.id)}
-                      className="flex items-center space-x-1 button-glass transition-all duration-200 hover:scale-105"
+                      className={`flex items-center space-x-1 transition-all duration-200 hover:scale-105 ${
+                        sortBy === option.id ? '' : 'button-glass'
+                      }`}
                       disabled={isFiltering}
                     >
                       <IconComponent className="h-3 w-3" />
