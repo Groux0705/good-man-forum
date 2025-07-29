@@ -14,6 +14,7 @@ import uploadRoutes from './routes/upload';
 import courseRoutes from './routes/courses';
 import notificationRoutes from './routes/notifications';
 import topicInteractionRoutes from './routes/topicInteractions';
+import pointRoutes from './routes/points';
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/topic-interactions', topicInteractionRoutes);
+app.use('/api/points', pointRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {

@@ -1,18 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, LogOut, Home, Layers, Settings, User, ChevronDown, BookOpen, Menu, X } from 'lucide-react';
+import { Plus, LogOut, Home, Layers, Settings, User, ChevronDown, BookOpen, Menu, X, Trophy, Coins } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
 import SearchBox from './SearchBox';
 import ThemeSelector from './ThemeSelector';
 import { NotificationBell } from './NotificationBell';
+import { LevelInfo } from '../types';
+import LevelProgress from './ui/LevelProgress';
+import PointDisplay from './ui/PointDisplay';
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [levelInfo, setLevelInfo] = useState<LevelInfo | null>(null);
+  const [userExperience, setUserExperience] = useState<number>(0);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserLevelInfo();
+    }
+  }, [user]);
+
+  // 监听用户balance和level变化，自动刷新level信息
+  useEffect(() => {
+    if (user) {
+      fetchUserLevelInfo();
+    }
+  }, [user?.balance, user?.level]);
+
+  const fetchUserLevelInfo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/points/info', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setLevelInfo(result.data.levelInfo);
+        setUserExperience(result.data.user.experience);
+      }
+    } catch (error) {
+      console.error('Error fetching level info:', error);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b theme-border header-glass">
@@ -92,7 +129,18 @@ const Header: React.FC = () => {
                     />
                     <div className="hidden sm:block">
                       <p className="text-sm font-medium theme-text">{user.username}</p>
-                      <p className="text-xs theme-text-secondary">Lv.{user.level}</p>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs theme-text-secondary">Lv.{user.level}</span>
+                          {levelInfo && (
+                            <span className="text-xs">{levelInfo.badge}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Coins className="h-3 w-3 text-yellow-500" />
+                          <span className="text-xs theme-text-secondary">{user.balance}</span>
+                        </div>
+                      </div>
                     </div>
                     <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 theme-text-secondary" />
                   </button>
@@ -100,7 +148,36 @@ const Header: React.FC = () => {
                   {showUserMenu && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-44 sm:w-48 dropdown-glass border rounded-lg shadow-lg z-50">
+                      <div className="absolute right-0 top-full mt-2 w-72 dropdown-glass border rounded-lg shadow-lg z-50">
+                        {levelInfo && (
+                          <div className="p-4 border-b theme-border">
+                            <div className="mb-3">
+                              <LevelProgress 
+                                level={user.level} 
+                                levelInfo={levelInfo}
+                                className="mb-2"
+                              />
+                              <PointDisplay 
+                                balance={user.balance}
+                                experience={userExperience}
+                                showExperience={true}
+                                size="sm"
+                                className=""
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-xs theme-text-secondary">
+                              <span>{levelInfo.title}</span>
+                              <Link 
+                                to="/leaderboard" 
+                                className="flex items-center space-x-1 hover:theme-text transition-colors"
+                                onClick={() => setShowUserMenu(false)}
+                              >
+                                <Trophy className="h-3 w-3" />
+                                <span>排行榜</span>
+                              </Link>
+                            </div>
+                          </div>
+                        )}
                         <div className="p-2 space-y-1">
                           <Link
                             to={`/user/${user.id}`}

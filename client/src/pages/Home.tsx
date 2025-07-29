@@ -4,13 +4,16 @@ import { topicService } from '../services/topic';
 import { Topic } from '../types';
 import TopicList from '../components/TopicList';
 import Sidebar from '../components/Sidebar';
+import DailyCheckIn from '../components/DailyCheckIn';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import PageTransition from '../components/ui/PageTransition';
 import { cachedFetch } from '../utils/cache';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home: React.FC = () => {
+  const { user } = useAuth();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -157,6 +160,11 @@ const Home: React.FC = () => {
 
           {/* 侧边栏 - 移动端优化 */}
           <div className="lg:w-80 lg:flex-shrink-0">
+            {user && (
+              <div className="mb-6">
+                <DailyCheckIn />
+              </div>
+            )}
             <Sidebar />
           </div>
         </div>

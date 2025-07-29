@@ -18,6 +18,7 @@ import UserProfile from './pages/UserProfile';
 import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import LessonLearning from './pages/LessonLearning';
+import Leaderboard from './pages/Leaderboard';
 import AnimationDemo from './pages/AnimationDemo';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -72,6 +73,7 @@ function AppContent() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/course/:id" element={<CourseDetail />} />
             <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonLearning />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/demo" element={<AnimationDemo />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />

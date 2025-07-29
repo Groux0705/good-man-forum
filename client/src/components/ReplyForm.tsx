@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
 import { replyService } from '../services/reply';
 import toast from 'react-hot-toast';
+import { showPointReward } from './ui/PointToast';
+import { getReward } from '../utils/pointRewards';
 
 interface ReplyFormProps {
   topicId: string;
@@ -25,7 +27,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
   onCancel,
   compact = false 
 }) => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>();
 
@@ -41,6 +43,13 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
     try {
       setLoading(true);
       await replyService.createReply(data.content, topicId, parentId, parentUsername);
+      
+      // 刷新用户信息
+      await refreshUser();
+      
+      // 显示积分奖励
+      showPointReward(getReward('REPLY'));
+      
       reset();
       onReplyCreated();
       if (onCancel) {

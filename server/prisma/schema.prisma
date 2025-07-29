@@ -14,8 +14,9 @@ model User {
   password  String
   avatar    String?
   bio       String?
-  balance   Int      @default(100)  // 用户积分
+  balance   Int      @default(100)  // 用户积分/金币
   level     Int      @default(1)    // 用户等级
+  experience Int     @default(0)    // 经验值
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -30,6 +31,7 @@ model User {
   courseComments CourseComment[]
   enrollments CourseEnrollment[]  // 新增：用户课程报名关系
   lessonProgress LessonProgress[]  // 新增：用户学习进度
+  pointHistory PointHistory[]      // 新增：积分变动记录
 
   @@map("users")
 }
@@ -308,4 +310,20 @@ model TopicFavorite {
 
   @@unique([userId, topicId])
   @@map("topic_favorites")
+}
+
+// 新增：积分变动记录模型
+model PointHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int      // 积分变动量（正数为获得，负数为消费）
+  type      String   // 变动类型：'post', 'reply', 'like', 'favorite', 'login', 'course_complete', 'admin', 'consume' 等
+  reason    String   // 变动原因描述
+  relatedId String?  // 关联的内容ID（主题ID、回复ID等）
+  relatedType String? // 关联内容类型：'topic', 'reply', 'course', 'lesson' 等
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("point_history")
 }

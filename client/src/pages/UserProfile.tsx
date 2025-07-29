@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { CSSTransition } from 'react-transition-group';
 import { User, Calendar, MessageSquare, FileText, MapPin, Heart, Bookmark } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Topic, Reply } from '../types';
+import { Topic, Reply, LevelInfo } from '../types';
 import { topicInteractionService } from '../services/topicInteractions';
+import LevelProgress from '../components/ui/LevelProgress';
+import PointDisplay from '../components/ui/PointDisplay';
+import DailyCheckIn from '../components/DailyCheckIn';
+import PointHistory from '../components/PointHistory';
 
 interface UserProfile {
   id: string;
@@ -14,11 +19,13 @@ interface UserProfile {
   bio: string | null;
   level: number;
   balance: number;
+  experience?: number;
   createdAt: string;
   topics: Topic[];
   replies: Reply[];
   topicsCount: number;
   repliesCount: number;
+  levelInfo?: LevelInfo;
 }
 
 interface UserContentResponse {
@@ -37,17 +44,61 @@ interface UserContentResponse {
 const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'topics' | 'replies' | 'liked' | 'favorites'>('topics');
+  const [activeTab, setActiveTab] = useState<'topics' | 'replies' | 'liked' | 'favorites' | 'points'>('topics');
   const [content, setContent] = useState<UserContentResponse | null>(null);
+  const [likedCount, setLikedCount] = useState<number>(0);
+  const [favoritedCount, setFavoritedCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [contentLoading, setContentLoading] = useState(false);
+  const [levelInfo, setLevelInfo] = useState<LevelInfo | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchUserProfile();
       fetchUserContent('topics');
+      fetchUserContent('liked');
+      fetchUserContent('favorites');
+      fetchUserLevelInfo();
     }
   }, [id]);
+
+  const getCurrentUserId = () => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      return currentUser.id;
+    } catch {
+      return null;
+    }
+  };
+
+  const fetchUserLevelInfo = async () => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      // 只有查看自己的资料时才获取详细等级信息
+      if (currentUser.id === id) {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/points/info', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          setLevelInfo(result.data.levelInfo);
+          // 更新用户信息中的经验值
+          if (user) {
+            setUser({
+              ...user,
+              experience: result.data.user.experience
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching level info:', error);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -71,9 +122,11 @@ const UserProfile: React.FC = () => {
       if (type === 'liked') {
         const data = await topicInteractionService.getUserLikedTopics(page, 10);
         setContent({ likedTopics: data.topics, pagination: data.pagination });
+        if (page === 1) setLikedCount(data.pagination.total);
       } else if (type === 'favorites') {
         const data = await topicInteractionService.getUserFavoriteTopics(page, 10);
         setContent({ favoriteTopics: data.topics, pagination: data.pagination });
+        if (page === 1) setFavoritedCount(data.pagination.total);
       } else {
         response = await fetch(`/api/users/${id}/${type}?page=${page}&limit=10`);
         if (response.ok) {
@@ -89,8 +142,12 @@ const UserProfile: React.FC = () => {
   };
 
   const handleTabChange = (tab: 'topics' | 'replies' | 'liked' | 'favorites') => {
-    setActiveTab(tab);
-    fetchUserContent(tab);
+    // 添加淡出效果
+    setContentLoading(true);
+    setTimeout(() => {
+      setActiveTab(tab);
+      fetchUserContent(tab);
+    }, 150); // 等待淡出动画完成
   };
 
   const formatDate = (dateString: string) => {
@@ -174,16 +231,38 @@ const UserProfile: React.FC = () => {
                   </p>
                 )}
 
+                {/* 等级和积分信息 */}
+                {levelInfo && (
+                  <div className="mb-6">
+                    <LevelProgress 
+                      level={user.level} 
+                      levelInfo={levelInfo}
+                      className="mb-4"
+                    />
+                    <PointDisplay 
+                      balance={user.balance}
+                      experience={user.experience}
+                      showExperience={true}
+                      size="lg"
+                      className="justify-center"
+                    />
+                  </div>
+                )}
+
                 {/* 统计信息 */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 bg-muted/20 rounded-lg border">
-                    <div className="text-2xl font-bold text-primary">{user.level}</div>
-                    <div className="text-sm text-muted-foreground">等级</div>
-                  </div>
-                  <div className="text-center p-3 bg-muted/20 rounded-lg border">
-                    <div className="text-2xl font-bold text-primary">{user.balance}</div>
-                    <div className="text-sm text-muted-foreground">余额</div>
-                  </div>
+                  {!levelInfo && (
+                    <>
+                      <div className="text-center p-3 bg-muted/20 rounded-lg border">
+                        <div className="text-2xl font-bold text-primary">{user.level}</div>
+                        <div className="text-sm text-muted-foreground">等级</div>
+                      </div>
+                      <div className="text-center p-3 bg-muted/20 rounded-lg border">
+                        <div className="text-2xl font-bold text-primary">{user.balance}</div>
+                        <div className="text-sm text-muted-foreground">积分</div>
+                      </div>
+                    </>
+                  )}
                   <div className="text-center p-3 bg-muted/20 rounded-lg border">
                     <div className="text-2xl font-bold text-primary">{user.topicsCount}</div>
                     <div className="text-sm text-muted-foreground">主题</div>
@@ -199,7 +278,7 @@ const UserProfile: React.FC = () => {
         </Card>
 
         {/* 内容选项卡 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-1 bg-muted/20 p-1 rounded-lg border">
+        <div className={`grid ${getCurrentUserId() === id ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'} gap-1 bg-muted/20 p-1 rounded-lg border`}>
           <button
             onClick={() => handleTabChange('topics')}
             className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
@@ -234,6 +313,7 @@ const UserProfile: React.FC = () => {
           >
             <Heart className="h-4 w-4" />
             <span className="hidden sm:inline">点赞</span>
+            <span className="text-xs">({likedCount})</span>
           </button>
           <button
             onClick={() => handleTabChange('favorites')}
@@ -245,7 +325,21 @@ const UserProfile: React.FC = () => {
           >
             <Bookmark className="h-4 w-4" />
             <span className="hidden sm:inline">收藏</span>
+            <span className="text-xs">({favoritedCount})</span>
           </button>
+          {getCurrentUserId() === id && (
+            <button
+              onClick={() => handleTabChange('points')}
+              className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
+                activeTab === 'points'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <div className="h-4 w-4 text-yellow-500">💰</div>
+              <span className="hidden sm:inline">积分</span>
+            </button>
+          )}
         </div>
 
         {/* 内容列表 */}
@@ -255,29 +349,34 @@ const UserProfile: React.FC = () => {
               {activeTab === 'topics' ? (
                 <>
                   <FileText className="h-5 w-5" />
-                  <span>用户主题</span>
+                  <span>用户主题 ({user.topicsCount})</span>
                 </>
               ) : activeTab === 'replies' ? (
                 <>
                   <MessageSquare className="h-5 w-5" />
-                  <span>用户回复</span>
+                  <span>用户回复 ({user.repliesCount})</span>
                 </>
               ) : activeTab === 'liked' ? (
                 <>
                   <Heart className="h-5 w-5" />
-                  <span>点赞主题</span>
+                  <span>点赞主题 ({likedCount})</span>
+                </>
+              ) : activeTab === 'favorites' ? (
+                <>
+                  <Bookmark className="h-5 w-5" />
+                  <span>收藏主题 ({favoritedCount})</span>
                 </>
               ) : (
                 <>
-                  <Bookmark className="h-5 w-5" />
-                  <span>收藏主题</span>
+                  <div className="h-5 w-5 text-yellow-500">💰</div>
+                  <span>积分记录</span>
                 </>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {contentLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-4 opacity-0 animate-fadeOut">
                 {[...Array(5)].map((_, i) => (
                   <div key={i} className="animate-pulse">
                     <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
@@ -285,13 +384,23 @@ const UserProfile: React.FC = () => {
                   </div>
                 ))}
               </div>
-            ) : content && (
-              (activeTab === 'topics' && content.topics?.length) ||
-              (activeTab === 'replies' && content.replies?.length) ||
-              (activeTab === 'liked' && content.likedTopics?.length) ||
-              (activeTab === 'favorites' && content.favoriteTopics?.length)
-            ) ? (
-              <div className="space-y-4">
+            ) : (
+              <CSSTransition
+                in={!contentLoading}
+                timeout={300}
+                classNames="tab-content"
+                unmountOnExit
+              >
+                <div>
+                  {activeTab === 'points' ? (
+                    <PointHistory />
+                  ) : content && (
+                    (activeTab === 'topics' && content.topics?.length) ||
+                    (activeTab === 'replies' && content.replies?.length) ||
+                    (activeTab === 'liked' && content.likedTopics?.length) ||
+                    (activeTab === 'favorites' && content.favoriteTopics?.length)
+                  ) ? (
+                    <div className="space-y-4 animate-fadeIn">
                 {activeTab === 'topics' && content.topics?.map((topic) => (
                   <div key={topic.id} className="border-b border-border last:border-b-0 pb-4 last:pb-0">
                     <div className="flex items-start space-x-4">
@@ -429,32 +538,40 @@ const UserProfile: React.FC = () => {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-muted-foreground mb-4">
-                  {activeTab === 'topics' ? (
-                    <>
-                      <FileText className="h-12 w-12 mx-auto mb-4" />
-                      <p>该用户还没有发布过主题</p>
-                    </>
-                  ) : activeTab === 'replies' ? (
-                    <>
-                      <MessageSquare className="h-12 w-12 mx-auto mb-4" />
-                      <p>该用户还没有发表过回复</p>
-                    </>
-                  ) : activeTab === 'liked' ? (
-                    <>
-                      <Heart className="h-12 w-12 mx-auto mb-4" />
-                      <p>该用户还没有点赞过主题</p>
-                    </>
                   ) : (
-                    <>
-                      <Bookmark className="h-12 w-12 mx-auto mb-4" />
-                      <p>该用户还没有收藏过主题</p>
-                    </>
+                    <div className="text-center py-12 animate-fadeIn">
+                      <div className="text-muted-foreground mb-4">
+                        {activeTab === 'topics' ? (
+                          <>
+                            <FileText className="h-12 w-12 mx-auto mb-4 transition-all duration-300" />
+                            <p className="transition-all duration-300">该用户还没有发布过主题</p>
+                          </>
+                        ) : activeTab === 'replies' ? (
+                          <>
+                            <MessageSquare className="h-12 w-12 mx-auto mb-4 transition-all duration-300" />
+                            <p className="transition-all duration-300">该用户还没有发表过回复</p>
+                          </>
+                        ) : activeTab === 'liked' ? (
+                          <>
+                            <Heart className="h-12 w-12 mx-auto mb-4 transition-all duration-300" />
+                            <p className="transition-all duration-300">该用户还没有点赞过主题</p>
+                          </>
+                        ) : activeTab === 'favorites' ? (
+                          <>
+                            <Bookmark className="h-12 w-12 mx-auto mb-4 transition-all duration-300" />
+                            <p className="transition-all duration-300">该用户还没有收藏过主题</p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-12 w-12 mx-auto mb-4 transition-all duration-300 text-yellow-500 text-4xl">💰</div>
+                            <p className="transition-all duration-300">暂无积分记录</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
+              </CSSTransition>
             )}
           </CardContent>
         </Card>

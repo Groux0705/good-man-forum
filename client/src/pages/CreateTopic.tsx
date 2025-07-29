@@ -6,6 +6,8 @@ import { topicService } from '../services/topic';
 import { nodeService } from '../services/node';
 import { Node } from '../types';
 import toast from 'react-hot-toast';
+import { showPointReward } from '../components/ui/PointToast';
+import { getReward } from '../utils/pointRewards';
 
 interface FormData {
   title: string;
@@ -16,7 +18,7 @@ interface FormData {
 const CreateTopic: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormData>();
@@ -52,6 +54,13 @@ const CreateTopic: React.FC = () => {
     try {
       setLoading(true);
       const topic = await topicService.createTopic(data.title, data.content, data.nodeId);
+      
+      // 刷新用户信息
+      await refreshUser();
+      
+      // 显示积分奖励
+      showPointReward(getReward('POST_TOPIC'));
+      
       toast.success('主题发表成功');
       navigate(`/topic/${topic.id}`);
     } catch (error: any) {

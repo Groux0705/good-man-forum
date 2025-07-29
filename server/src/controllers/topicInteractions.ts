@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
+import { PointService } from '../services/pointService';
 
 const prisma = new PrismaClient();
 
@@ -72,6 +73,34 @@ export const likeTopic = async (req: AuthRequest, res: Response) => {
       });
 
       result = { action: 'liked', liked: true };
+
+      // 奖励积分给点赞者和被点赞者
+      try {
+        // 点赞者获得积分
+        await PointService.addPoints({
+          userId,
+          type: 'give_like',
+          amount: 0,
+          reason: '点赞他人',
+          relatedId: id,
+          relatedType: 'topic'
+        });
+
+        // 被点赞者获得积分（如果不是给自己点赞）
+        if (topic.userId !== userId) {
+          await PointService.addPoints({
+            userId: topic.userId,
+            type: 'like_received',
+            amount: 0,
+            reason: '获得点赞',
+            relatedId: id,
+            relatedType: 'topic'
+          });
+        }
+      } catch (pointError) {
+        console.error('Error adding points for like:', pointError);
+        // 不影响主流程
+      }
 
       // 发送通知给主题作者（如果不是给自己点赞）
       if (topic.userId !== userId) {
@@ -186,6 +215,34 @@ export const favoriteTopic = async (req: AuthRequest, res: Response) => {
       });
 
       result = { action: 'favorited', favorited: true };
+
+      // 奖励积分给收藏者和被收藏者
+      try {
+        // 收藏者获得积分
+        await PointService.addPoints({
+          userId,
+          type: 'give_favorite',
+          amount: 0,
+          reason: '收藏他人',
+          relatedId: id,
+          relatedType: 'topic'
+        });
+
+        // 被收藏者获得积分（如果不是给自己收藏）
+        if (topic.userId !== userId) {
+          await PointService.addPoints({
+            userId: topic.userId,
+            type: 'favorite_received',
+            amount: 0,
+            reason: '获得收藏',
+            relatedId: id,
+            relatedType: 'topic'
+          });
+        }
+      } catch (pointError) {
+        console.error('Error adding points for favorite:', pointError);
+        // 不影响主流程
+      }
 
       // 发送通知给主题作者（如果不是给自己收藏）
       if (topic.userId !== userId) {

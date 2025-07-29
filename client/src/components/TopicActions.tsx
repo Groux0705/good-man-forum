@@ -3,6 +3,8 @@ import { Heart, Bookmark } from 'lucide-react';
 import { Button } from './ui/Button';
 import { topicInteractionService } from '../services/topicInteractions';
 import { useAuth } from '../contexts/AuthContext';
+import { showPointReward } from './ui/PointToast';
+import { getReward } from '../utils/pointRewards';
 
 interface TopicActionsProps {
   topicId: string;
@@ -17,7 +19,7 @@ export const TopicActions: React.FC<TopicActionsProps> = ({
   initialFavorites = 0,
   className = ''
 }) => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [likes, setLikes] = useState(initialLikes);
@@ -53,6 +55,12 @@ export const TopicActions: React.FC<TopicActionsProps> = ({
       setLiked(result.liked || false);
       setLikes(result.likes);
 
+      // 如果是点赞操作，显示积分奖励并刷新用户信息
+      if (result.action === 'liked') {
+        await refreshUser();
+        showPointReward(getReward('GIVE_LIKE'));
+      }
+
       console.log(`主题${result.action === 'liked' ? '点赞' : '取消点赞'}成功`);
     } catch (error) {
       console.error('点赞操作失败:', error);
@@ -70,6 +78,12 @@ export const TopicActions: React.FC<TopicActionsProps> = ({
       
       setFavorited(result.favorited || false);
       setFavorites(result.favorites || 0);
+
+      // 如果是收藏操作，显示积分奖励并刷新用户信息
+      if (result.action === 'favorited') {
+        await refreshUser();
+        showPointReward(getReward('GIVE_FAVORITE'));
+      }
 
       console.log(`主题${result.action === 'favorited' ? '收藏' : '取消收藏'}成功`);
     } catch (error) {

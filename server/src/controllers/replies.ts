@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
+import { PointService } from '../services/pointService';
 
 const prisma = new PrismaClient();
 
@@ -97,6 +98,21 @@ export const createReply = async (req: AuthRequest, res: Response) => {
         lastReply: new Date()
       }
     });
+
+    // 奖励回复积分
+    try {
+      await PointService.addPoints({
+        userId,
+        type: 'reply',
+        amount: 0, // amount在PointService中会被规则覆盖
+        reason: '发表回复',
+        relatedId: reply.id,
+        relatedType: 'reply'
+      });
+    } catch (pointError) {
+      console.error('Error adding points for reply:', pointError);
+      // 不影响主流程
+    }
 
     // 发送通知
     try {

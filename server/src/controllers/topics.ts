@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
+import { PointService } from '../services/pointService';
 
 const prisma = new PrismaClient();
 
@@ -282,6 +283,39 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       where: { id: nodeId },
       data: { topics: { increment: 1 } }
     });
+
+    // 奖励发帖积分
+    try {
+      // 检查是否是用户的第一篇帖子
+      const userTopicCount = await prisma.topic.count({
+        where: { userId }
+      });
+
+      if (userTopicCount === 1) {
+        // 首次发帖奖励
+        await PointService.addPoints({
+          userId,
+          type: 'first_post',
+          amount: 0,
+          reason: '首次发帖奖励',
+          relatedId: topic.id,
+          relatedType: 'topic'
+        });
+      } else {
+        // 普通发帖奖励
+        await PointService.addPoints({
+          userId,
+          type: 'post',
+          amount: 0,
+          reason: '发布主题',
+          relatedId: topic.id,
+          relatedType: 'topic'
+        });
+      }
+    } catch (pointError) {
+      console.error('Error adding points for topic creation:', pointError);
+      // 不影响主流程
+    }
 
     res.status(201).json({
       success: true,

@@ -18,6 +18,7 @@ async function main() {
       password: adminPassword,
       balance: 1000,
       level: 10,
+      experience: 4500, // 10级所需经验值
     },
   });
 
@@ -30,6 +31,7 @@ async function main() {
       password: testPassword,
       balance: 100,
       level: 1,
+      experience: 50, // 初始经验值
     },
   });
 
