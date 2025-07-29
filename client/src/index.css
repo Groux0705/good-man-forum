@@ -354,18 +354,11 @@
 
   /* Liquid Dropdown with Frosted Glass */
   .dropdown-glass {
-    backdrop-filter: blur(20px) saturate(180%) brightness(1.05);
-    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.05);
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.05) 100%
-    );
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: hsl(var(--popover));
+    border: 1px solid hsl(var(--border));
     box-shadow: 
       0 15px 35px rgba(0, 0, 0, 0.1),
-      0 5px 15px rgba(0, 0, 0, 0.07),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      0 5px 15px rgba(0, 0, 0, 0.07);
   }
 
   /* Liquid Badge with Frosted Glass */
@@ -610,6 +603,59 @@
 .page-exit-active {
   opacity: 0;
   transform: translateY(-10px) scale(0.98);
+}
+
+/* Tab Content Transition Effects */
+.tab-content-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.tab-content-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+}
+
+.tab-content-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tab-content-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s cubic-bezier(0.23, 1, 0.320, 1) forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* Liquid Slide Transitions */
