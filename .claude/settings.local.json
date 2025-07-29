@@ -35,7 +35,9 @@
       "Bash(pm2 restart:*)",
       "Bash(rg:*)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(npx ts-node:*)"
     ],
     "deny": []
   }

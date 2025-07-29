@@ -15,6 +15,9 @@ import courseRoutes from './routes/courses';
 import notificationRoutes from './routes/notifications';
 import topicInteractionRoutes from './routes/topicInteractions';
 import pointRoutes from './routes/points';
+import badgeRoutes from './routes/badges';
+import dailyTaskRoutes from './routes/dailyTasks';
+import specialTagRoutes from './routes/specialTags';
 
 dotenv.config();
 
@@ -52,6 +55,9 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/topic-interactions', topicInteractionRoutes);
 app.use('/api/points', pointRoutes);
+app.use('/api/badges', badgeRoutes);
+app.use('/api/daily-tasks', dailyTaskRoutes);
+app.use('/api/special-tags', specialTagRoutes);
 
 // 健康检查端点
 app.get('/health', (req, res) => {

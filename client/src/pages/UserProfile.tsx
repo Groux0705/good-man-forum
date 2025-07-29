@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CSSTransition } from 'react-transition-group';
-import { User, Calendar, MessageSquare, FileText, MapPin, Heart, Bookmark } from 'lucide-react';
+import { User, Calendar, MessageSquare, FileText, MapPin, Heart, Bookmark, Trophy, Crown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -11,6 +11,8 @@ import LevelProgress from '../components/ui/LevelProgress';
 import PointDisplay from '../components/ui/PointDisplay';
 import DailyCheckIn from '../components/DailyCheckIn';
 import PointHistory from '../components/PointHistory';
+import BadgeDisplay from '../components/BadgeDisplay';
+import SpecialTagDisplay from '../components/SpecialTagDisplay';
 
 interface UserProfile {
   id: string;
@@ -44,7 +46,7 @@ interface UserContentResponse {
 const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<'topics' | 'replies' | 'liked' | 'favorites' | 'points'>('topics');
+  const [activeTab, setActiveTab] = useState<'topics' | 'replies' | 'liked' | 'favorites' | 'points' | 'badges' | 'tags'>('topics');
   const [content, setContent] = useState<UserContentResponse | null>(null);
   const [likedCount, setLikedCount] = useState<number>(0);
   const [favoritedCount, setFavoritedCount] = useState<number>(0);
@@ -141,12 +143,17 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleTabChange = (tab: 'topics' | 'replies' | 'liked' | 'favorites') => {
+  const handleTabChange = (tab: 'topics' | 'replies' | 'liked' | 'favorites' | 'badges' | 'tags' | 'points') => {
     // 添加淡出效果
     setContentLoading(true);
     setTimeout(() => {
       setActiveTab(tab);
-      fetchUserContent(tab);
+      // 只对需要网络请求的标签调用fetchUserContent
+      if (['topics', 'replies', 'liked', 'favorites'].includes(tab)) {
+        fetchUserContent(tab);
+      } else {
+        setContentLoading(false);
+      }
     }, 150); // 等待淡出动画完成
   };
 
@@ -278,7 +285,7 @@ const UserProfile: React.FC = () => {
         </Card>
 
         {/* 内容选项卡 */}
-        <div className={`grid ${getCurrentUserId() === id ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'} gap-1 bg-muted/20 p-1 rounded-lg border`}>
+        <div className={`grid ${getCurrentUserId() === id ? 'grid-cols-3 md:grid-cols-7' : 'grid-cols-2 md:grid-cols-6'} gap-1 bg-muted/20 p-1 rounded-lg border`}>
           <button
             onClick={() => handleTabChange('topics')}
             className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
@@ -327,6 +334,28 @@ const UserProfile: React.FC = () => {
             <span className="hidden sm:inline">收藏</span>
             <span className="text-xs">({favoritedCount})</span>
           </button>
+          <button
+            onClick={() => handleTabChange('badges')}
+            className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
+              activeTab === 'badges'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Trophy className="h-4 w-4" />
+            <span className="hidden sm:inline">勋章</span>
+          </button>
+          <button
+            onClick={() => handleTabChange('tags')}
+            className={`flex items-center justify-center space-x-2 py-3 px-2 rounded-md transition-all duration-200 ${
+              activeTab === 'tags'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Crown className="h-4 w-4" />
+            <span className="hidden sm:inline">标识</span>
+          </button>
           {getCurrentUserId() === id && (
             <button
               onClick={() => handleTabChange('points')}
@@ -366,6 +395,16 @@ const UserProfile: React.FC = () => {
                   <Bookmark className="h-5 w-5" />
                   <span>收藏主题 ({favoritedCount})</span>
                 </>
+              ) : activeTab === 'badges' ? (
+                <>
+                  <Trophy className="h-5 w-5" />
+                  <span>用户勋章</span>
+                </>
+              ) : activeTab === 'tags' ? (
+                <>
+                  <Crown className="h-5 w-5" />
+                  <span>专属标识</span>
+                </>
               ) : (
                 <>
                   <div className="h-5 w-5 text-yellow-500">💰</div>
@@ -394,6 +433,10 @@ const UserProfile: React.FC = () => {
                 <div>
                   {activeTab === 'points' ? (
                     <PointHistory />
+                  ) : activeTab === 'badges' ? (
+                    <BadgeDisplay userId={id} showAll={true} />
+                  ) : activeTab === 'tags' ? (
+                    <SpecialTagDisplay userId={id} />
                   ) : content && (
                     (activeTab === 'topics' && content.topics?.length) ||
                     (activeTab === 'replies' && content.replies?.length) ||
@@ -560,6 +603,16 @@ const UserProfile: React.FC = () => {
                           <>
                             <Bookmark className="h-12 w-12 mx-auto mb-4 transition-all duration-300" />
                             <p className="transition-all duration-300">该用户还没有收藏过主题</p>
+                          </>
+                        ) : activeTab === 'badges' ? (
+                          <>
+                            <Trophy className="h-12 w-12 mx-auto mb-4 transition-all duration-300" />
+                            <p className="transition-all duration-300">该用户还没有获得任何勋章</p>
+                          </>
+                        ) : activeTab === 'tags' ? (
+                          <>
+                            <Crown className="h-12 w-12 mx-auto mb-4 transition-all duration-300" />
+                            <p className="transition-all duration-300">该用户还没有专属标识</p>
                           </>
                         ) : (
                           <>

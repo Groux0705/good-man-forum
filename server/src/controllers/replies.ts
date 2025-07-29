@@ -114,6 +114,25 @@ export const createReply = async (req: AuthRequest, res: Response) => {
       // 不影响主流程
     }
 
+    // 更新每日任务进度和检查勋章
+    try {
+      const { DailyTaskService } = await import('../services/dailyTaskService');
+      const { BadgeService } = await import('../services/badgeService');
+      const { SpecialTagService } = await import('../services/specialTagService');
+      
+      // 更新回复任务进度
+      await DailyTaskService.handleUserAction(userId, 'reply_created');
+      
+      // 检查并授予相关勋章
+      await BadgeService.checkAndAwardBadges(userId);
+      
+      // 检查并授予条件专属标识
+      await SpecialTagService.checkAndGrantConditionalTags(userId);
+    } catch (achievementError) {
+      console.error('Error processing achievements for reply creation:', achievementError);
+      // 不影响主流程
+    }
+
     // 发送通知
     try {
       const { notificationService } = await import('../services/notificationService');

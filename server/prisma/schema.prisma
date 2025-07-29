@@ -32,6 +32,9 @@ model User {
   enrollments CourseEnrollment[]  // 新增：用户课程报名关系
   lessonProgress LessonProgress[]  // 新增：用户学习进度
   pointHistory PointHistory[]      // 新增：积分变动记录
+  badges       UserBadge[]         // 新增：用户勋章
+  dailyTasks   DailyTaskProgress[] // 新增：每日任务进度
+  specialTags  UserSpecialTag[]    // 新增：专属标识
 
   @@map("users")
 }
@@ -326,4 +329,149 @@ model PointHistory {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("point_history")
+}
+
+// 勋章系统
+model Badge {
+  id          String   @id @default(cuid())
+  name        String   @unique         // 勋章名称
+  title       String                   // 勋章标题
+  description String                   // 勋章描述
+  icon        String                   // 勋章图标（emoji或图片URL）
+  category    String                   // 勋章分类：'activity', 'achievement', 'special', 'time'
+  rarity      String   @default("common") // 稀有度：'common', 'rare', 'epic', 'legendary'
+  
+  // 获得条件
+  condition   String                   // 获得条件JSON字符串
+  points      Int      @default(0)     // 获得勋章奖励的积分
+  experience  Int      @default(0)     // 获得勋章奖励的经验值
+  
+  // 状态
+  active      Boolean  @default(true)  // 是否激活
+  order       Int      @default(0)     // 排序
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  userBadges  UserBadge[]
+  
+  @@map("badges")
+}
+
+// 用户勋章关系
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+  
+  // 关联关系
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+// 每日任务模板
+model DailyTask {
+  id          String   @id @default(cuid())
+  name        String   @unique         // 任务名称
+  title       String                   // 任务标题
+  description String                   // 任务描述
+  icon        String                   // 任务图标
+  category    String                   // 任务分类：'social', 'learning', 'activity'
+  
+  // 任务要求
+  target      Int                      // 目标数量
+  type        String                   // 任务类型：'post', 'reply', 'like', 'checkin', 'course_time'
+  
+  // 奖励
+  points      Int      @default(5)     // 完成奖励积分  
+  experience  Int      @default(5)     // 完成奖励经验值
+  
+  // 状态
+  active      Boolean  @default(true)  // 是否激活
+  order       Int      @default(0)     // 排序
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  userProgress DailyTaskProgress[]
+  
+  @@map("daily_tasks")
+}
+
+// 用户每日任务进度
+model DailyTaskProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  taskId    String
+  date      String                     // 日期字符串 YYYY-MM-DD
+  
+  // 进度
+  progress  Int      @default(0)       // 当前进度
+  completed Boolean  @default(false)   // 是否完成
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // 关联关系
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      DailyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, taskId, date])
+  @@map("daily_task_progress")
+}
+
+// 专属标识模板
+model SpecialTag {
+  id          String   @id @default(cuid())
+  name        String   @unique         // 标识名称
+  title       String                   // 标识标题
+  description String                   // 标识描述
+  icon        String                   // 标识图标
+  color       String   @default("#3B82F6") // 标识颜色
+  category    String                   // 标识分类：'vip', 'admin', 'special', 'achievement'
+  
+  // 权限和特权
+  privileges  String?                  // 特权JSON字符串
+  
+  // 获得条件
+  condition   String?                  // 获得条件JSON字符串
+  permanent   Boolean  @default(false) // 是否永久有效
+  duration    Int?                     // 有效期（天数，null表示永久）
+  
+  // 状态
+  active      Boolean  @default(true)  // 是否激活
+  order       Int      @default(0)     // 排序
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  userTags    UserSpecialTag[]
+  
+  @@map("special_tags")
+}
+
+// 用户专属标识关系
+model UserSpecialTag {
+  id        String   @id @default(cuid())
+  userId    String
+  tagId     String
+  
+  // 有效期
+  grantedAt DateTime @default(now())
+  expiresAt DateTime?                  // 过期时间，null表示永久
+  active    Boolean  @default(true)    // 是否激活显示
+  
+  // 关联关系
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag       SpecialTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, tagId])
+  @@map("user_special_tags")
 }

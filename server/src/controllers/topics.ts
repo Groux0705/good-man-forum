@@ -317,6 +317,25 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       // 不影响主流程
     }
 
+    // 更新每日任务进度和检查勋章
+    try {
+      const { DailyTaskService } = await import('../services/dailyTaskService');
+      const { BadgeService } = await import('../services/badgeService');
+      const { SpecialTagService } = await import('../services/specialTagService');
+      
+      // 更新发帖任务进度
+      await DailyTaskService.handleUserAction(userId, 'post_created');
+      
+      // 检查并授予相关勋章
+      await BadgeService.checkAndAwardBadges(userId);
+      
+      // 检查并授予条件专属标识
+      await SpecialTagService.checkAndGrantConditionalTags(userId);
+    } catch (achievementError) {
+      console.error('Error processing achievements for topic creation:', achievementError);
+      // 不影响主流程
+    }
+
     res.status(201).json({
       success: true,
       data: topic
