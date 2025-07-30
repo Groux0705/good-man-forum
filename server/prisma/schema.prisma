@@ -10,9 +10,11 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   username  String   @unique
-  email     String   @unique
-  password  String
+  email     String
+  password  String?  // OAuth用户可能没有密码
   avatar    String?
+  provider  String   @default("local") // 认证提供商: local, google, github
+  providerId String? // OAuth提供商的用户ID
   bio       String?
   role      String   @default("user") // 用户角色: user, moderator, admin
   balance   Int      @default(100)  // 用户积分/金币
@@ -54,7 +56,9 @@ model User {
   punishments  UserPunishment[]    // 用户处罚记录
   appeals      UserAppeal[]        // 用户申诉记录
   loginLogs    UserLoginLog[]      // 登录日志
+  passwordResetTokens PasswordResetToken[] // 密码重置令牌
 
+  @@unique([email, provider]) // 同一邮箱可以在不同provider下存在
   @@map("users")
 }
 
@@ -653,4 +657,20 @@ model BatchOperation {
   updatedAt DateTime @updatedAt
   
   @@map("batch_operations")
+}
+
+// 密码重置令牌
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String   // 用户ID
+  token     String   @unique // 重置令牌
+  expiresAt DateTime // 过期时间
+  used      Boolean  @default(false) // 是否已使用
+  
+  // 关联关系
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@map("password_reset_tokens")
 }

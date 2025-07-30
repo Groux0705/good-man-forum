@@ -9,6 +9,7 @@ interface AuthContextType {
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (userData: Partial<User>) => void;
+  setUser: (user: User | null) => void;
   refreshUser: () => Promise<void>;
   loading: boolean;
 }
@@ -120,6 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     updateProfile,
+    setUser,
     refreshUser,
     loading,
   };

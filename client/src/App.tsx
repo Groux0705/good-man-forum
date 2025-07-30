@@ -8,6 +8,9 @@ import PageTransition from './components/ui/PageTransition';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import LoginCallback from './pages/LoginCallback';
 import TopicDetail from './pages/TopicDetail';
 import CreateTopic from './pages/CreateTopic';
 import NodeList from './pages/NodeList';
@@ -45,7 +48,7 @@ const queryClient = new QueryClient({
 });
 
 // 需要隐藏导航栏的特殊页面
-const FOCUSED_PAGES = ['/login', '/register', '/terms-of-service', '/privacy-policy'];
+const FOCUSED_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/terms-of-service', '/privacy-policy'];
 
 function AppContent() {
   const location = useLocation();
@@ -72,7 +75,10 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/login/callback" element={<LoginCallback />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/topic/:id" element={<TopicDetail />} />
             <Route path="/create" element={<CreateTopic />} />
             <Route path="/nodes" element={<NodeList />} />

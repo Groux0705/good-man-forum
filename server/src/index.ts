@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
+import session from 'express-session';
+import passport from './config/passport';
 
 import { generalLimiter } from './middleware/rateLimiter';
 import { startPunishmentCleanupJob } from './middleware/punishmentCheck';
@@ -39,6 +41,21 @@ app.use(cors({
 app.use(generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Session配置（OAuth需要）
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24小时
+  }
+}));
+
+// Passport中间件
+app.use(passport.initialize());
+app.use(passport.session());
 
 // 静态文件服务 - 配置 CORS 头
 app.use('/uploads', (req, res, next) => {
