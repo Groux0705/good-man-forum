@@ -33,6 +33,7 @@ router.get('/users', usersController.getUsers);
 router.get('/users/stats', usersController.getUserStats);
 router.get('/users/:id', usersController.getUserDetail);
 router.post('/users/:id/punish', usersController.punishUser);
+router.get('/punishments', usersController.getAllPunishments);
 router.put('/punishments/:punishmentId/revoke', usersController.revokePunishment);
 router.post('/users/batch', usersController.batchOperation);
 router.get('/batch-operations/:operationId', usersController.getBatchOperationStatus);

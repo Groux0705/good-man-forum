@@ -18,11 +18,29 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
         bio: true,
         balance: true,
         level: true,
+        status: true,
         createdAt: true,
         _count: {
           select: {
             topics: true,
             replies: true
+          }
+        },
+        punishments: {
+          where: {
+            status: 'active'
+          },
+          orderBy: {
+            severity: 'desc'
+          },
+          select: {
+            id: true,
+            type: true,
+            reason: true,
+            severity: true,
+            startTime: true,
+            endTime: true,
+            details: true
           }
         }
       }
@@ -204,6 +222,7 @@ export const getUserById = async (req: Request, res: Response) => {
         bio: true,
         level: true,
         balance: true,
+        status: true,
         createdAt: true,
         topics: {
           take: 10,
@@ -227,6 +246,23 @@ export const getUserById = async (req: Request, res: Response) => {
           select: {
             topics: true,
             replies: true
+          }
+        },
+        punishments: {
+          where: {
+            status: 'active'
+          },
+          orderBy: {
+            severity: 'desc'
+          },
+          select: {
+            id: true,
+            type: true,
+            reason: true,
+            severity: true,
+            startTime: true,
+            endTime: true,
+            details: true
           }
         }
       }

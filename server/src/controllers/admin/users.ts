@@ -306,6 +306,30 @@ export const punishUser = async (req: AuthenticatedRequest, res: Response) => {
       severity
     }, req);
 
+    // 创建通知给被惩罚用户
+    try {
+      const typeNames = {
+        ban: '封禁',
+        mute: '禁言',
+        suspend: '暂停',
+        warning: '警告'
+      };
+      
+      const endTimeStr = endTime ? `至 ${endTime.toLocaleString()}` : '永久';
+      
+      await prisma.notification.create({
+        data: {
+          userId: id,
+          type: 'punishment',
+          title: `账户${typeNames[type as keyof typeof typeNames]}通知`,
+          content: `您的账户已被${typeNames[type as keyof typeof typeNames]}（等级${severity}）\n原因：${reason}\n持续时间：${endTimeStr}`,
+          actionUrl: '/punishments/my-punishments'
+        }
+      });
+    } catch (notificationError) {
+      console.error('创建惩罚通知失败:', notificationError);
+    }
+
     res.json({
       success: true,
       data: result,
@@ -368,6 +392,28 @@ export const revokePunishment = async (req: AuthenticatedRequest, res: Response)
       punishmentId,
       reason
     }, req);
+
+    // 创建解除惩罚通知
+    try {
+      const typeNames = {
+        ban: '封禁',
+        mute: '禁言',
+        suspend: '暂停',
+        warning: '警告'
+      };
+      
+      await prisma.notification.create({
+        data: {
+          userId: result.userId,
+          type: 'punishment_revoked',
+          title: `${typeNames[result.type as keyof typeof typeNames]}已解除`,
+          content: `您的${typeNames[result.type as keyof typeof typeNames]}惩罚已被管理员解除。${reason ? `\n解除原因：${reason}` : ''}`,
+          actionUrl: '/punishments/my-punishments'
+        }
+      });
+    } catch (notificationError) {
+      console.error('创建解除惩罚通知失败:', notificationError);
+    }
 
     res.json({
       success: true,
@@ -792,3 +838,84 @@ async function processBatchOperation(
     });
   }
 }
+
+// 获取所有惩罚记录
+export const getAllPunishments = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 20, 
+      type, 
+      status, 
+      severity,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    
+    // 构建筛选条件
+    const where: any = {};
+    
+    if (type && type !== 'all') {
+      where.type = type;
+    }
+    
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    
+    if (severity) {
+      where.severity = Number(severity);
+    }
+
+    // 获取惩罚记录
+    const punishments = await prisma.userPunishment.findMany({
+      where,
+      skip,
+      take: Number(limit),
+      orderBy: {
+        [sortBy as string]: sortOrder === 'desc' ? 'desc' : 'asc'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    // 获取总数
+    const total = await prisma.userPunishment.count({ where });
+
+    // 获取统计信息
+    const stats = await prisma.userPunishment.groupBy({
+      by: ['type', 'status'],
+      _count: true
+    });
+
+    res.json({
+      success: true,
+      data: {
+        punishments,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        },
+        stats
+      }
+    });
+  } catch (error) {
+    console.error('获取惩罚记录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取惩罚记录失败'
+    });
+  }
+};

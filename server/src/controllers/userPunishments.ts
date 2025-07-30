@@ -192,55 +192,62 @@ export const submitAppeal = async (req: AuthenticatedRequest, res: Response) => 
 
     const { punishmentId, title, content, evidence } = req.body;
 
-    if (!punishmentId || !title || !content) {
+    if (!title || !content) {
       return res.status(400).json({
         success: false,
         message: '请填写完整的申诉信息'
       });
     }
 
-    // 验证处罚是否存在且属于当前用户
-    const punishment = await prisma.userPunishment.findFirst({
-      where: {
-        id: punishmentId,
-        userId: req.user.id,
-        status: 'active'
-      }
-    });
+    let punishment = null;
+    let priority = 'normal';
 
-    if (!punishment) {
-      return res.status(404).json({
-        success: false,
-        message: '处罚记录不存在或无法申诉'
+    // 如果指定了处罚ID，验证处罚是否存在且属于当前用户
+    if (punishmentId) {
+      punishment = await prisma.userPunishment.findFirst({
+        where: {
+          id: punishmentId,
+          userId: req.user.id,
+          status: 'active'
+        }
       });
-    }
 
-    // 检查是否已有未完成的申诉
-    const existingAppeal = await prisma.userAppeal.findFirst({
-      where: {
-        userId: req.user.id,
-        punishmentId,
-        status: { in: ['pending', 'processing'] }
+      if (!punishment) {
+        return res.status(404).json({
+          success: false,
+          message: '处罚记录不存在或无法申诉'
+        });
       }
-    });
 
-    if (existingAppeal) {
-      return res.status(400).json({
-        success: false,
-        message: '该处罚已有未完成的申诉，请等待处理结果'
+      // 检查是否已有未完成的申诉
+      const existingAppeal = await prisma.userAppeal.findFirst({
+        where: {
+          userId: req.user.id,
+          punishmentId,
+          status: { in: ['pending', 'processing'] }
+        }
       });
+
+      if (existingAppeal) {
+        return res.status(400).json({
+          success: false,
+          message: '该处罚已有未完成的申诉，请等待处理结果'
+        });
+      }
+
+      priority = punishment.severity >= 4 ? 'high' : 'normal';
     }
 
     // 创建申诉记录
     const appeal = await prisma.userAppeal.create({
       data: {
         userId: req.user.id,
-        punishmentId,
-        type: 'punishment_appeal',
+        punishmentId: punishmentId || null,
+        type: punishmentId ? 'punishment_appeal' : 'general_appeal',
         title,
         content,
         evidence: evidence ? JSON.stringify(evidence) : null,
-        priority: punishment.severity >= 4 ? 'high' : 'normal'
+        priority
       }
     });
 

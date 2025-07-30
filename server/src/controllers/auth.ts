@@ -99,6 +99,17 @@ export const login = async (req: Request, res: Response) => {
           { username },
           { email: username }
         ]
+      },
+      include: {
+        punishments: {
+          where: {
+            status: 'active'
+          },
+          orderBy: {
+            severity: 'desc'
+          },
+          take: 1
+        }
       }
     });
 
@@ -110,11 +121,25 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const token = generateToken(user.id);
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, punishments, ...userWithoutPassword } = user;
+
+    const activePunishment = punishments && punishments.length > 0 ? punishments[0] : null;
 
     res.json({
       success: true,
-      data: { user: userWithoutPassword, token }
+      data: { 
+        user: userWithoutPassword, 
+        token,
+        punishment: activePunishment ? {
+          id: activePunishment.id,
+          type: activePunishment.type,
+          reason: activePunishment.reason,
+          severity: activePunishment.severity,
+          startTime: activePunishment.startTime,
+          endTime: activePunishment.endTime,
+          details: activePunishment.details
+        } : null
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
