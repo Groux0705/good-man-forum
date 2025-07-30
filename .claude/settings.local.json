@@ -42,7 +42,11 @@
       "Bash(npm:*)",
       "Bash(nvm:*)",
       "Bash(brew:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(rs)",
+      "Bash(PORT=3001 NODE_ENV=development nodemon server/src/index.ts)",
+      "Bash(npx nodemon:*)",
+      "Bash(PWD)"
     ],
     "deny": []
   }
