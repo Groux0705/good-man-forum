@@ -49,6 +49,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(data.token);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    
+    // 检查是否有惩罚信息并显示弹窗
+    if (data.punishment) {
+      const { type, reason, severity, endTime } = data.punishment;
+      const typeNames = {
+        ban: '封禁',
+        mute: '禁言',
+        suspend: '暂停',
+        warning: '警告'
+      };
+      
+      const endTimeStr = endTime ? `至 ${new Date(endTime).toLocaleString()}` : '永久';
+      const message = `您的账户已被${typeNames[type as keyof typeof typeNames]}（等级${severity}）\n原因：${reason}\n持续时间：${endTimeStr}`;
+      
+      // 使用 setTimeout 确保在登录成功后显示
+      setTimeout(() => {
+        alert(message);
+      }, 100);
+    }
   };
 
   const register = async (username: string, email: string, password: string) => {

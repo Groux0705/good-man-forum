@@ -31,6 +31,7 @@ import NodeManagement from './pages/admin/NodeManagement';
 import ReportManagement from './pages/admin/ReportManagement';
 import LogsManagement from './pages/admin/LogsManagement';
 import Settings from './pages/admin/Settings';
+import UserPunishments from './pages/UserPunishments';
 import './styles/theme.css';
 import './index.css';
 
@@ -86,6 +87,7 @@ function AppContent() {
             <Route path="/demo" element={<AnimationDemo />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/punishments/my-punishments" element={<UserPunishments />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>

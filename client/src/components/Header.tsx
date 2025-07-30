@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, LogOut, Home, Layers, Settings, User, ChevronDown, BookOpen, Menu, X, Trophy, Coins } from 'lucide-react';
+import { Plus, LogOut, Home, Layers, Settings, User, ChevronDown, BookOpen, Menu, X, Trophy, Coins, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
@@ -128,7 +128,16 @@ const Header: React.FC = () => {
                       className="w-6 h-6 sm:w-8 sm:h-8"
                     />
                     <div className="hidden sm:block">
-                      <p className="text-sm font-medium theme-text">{user.username}</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm font-medium theme-text">{user.username}</p>
+                        {user.status && user.status !== 'active' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 border">
+                            {user.status === 'banned' && '🚫'}
+                            {user.status === 'muted' && '🔇'}
+                            {user.status === 'suspended' && '⏸️'}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center space-x-2">
                         <div className="flex items-center space-x-1">
                           <span className="text-xs theme-text-secondary">Lv.{user.level}</span>
@@ -194,6 +203,14 @@ const Header: React.FC = () => {
                           >
                             <Settings className="h-4 w-4 flex-shrink-0" />
                             <span>个人设置</span>
+                          </Link>
+                          <Link
+                            to="/punishments/my-punishments"
+                            className="flex items-center space-x-3 px-3 py-2 rounded-md hover-lift transition-colors text-sm theme-text touch-manipulation"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <Shield className="h-4 w-4 flex-shrink-0" />
+                            <span>惩罚记录</span>
                           </Link>
                           <hr className="my-1 theme-border" />
                           <button
@@ -291,6 +308,14 @@ const Header: React.FC = () => {
                   >
                     <Settings className="h-4 w-4 theme-primary" />
                     <span>个人设置</span>
+                  </Link>
+                  <Link
+                    to="/punishments/my-punishments"
+                    className="flex items-center space-x-3 px-3 py-3 rounded-md hover-lift transition-colors theme-text touch-manipulation"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <Shield className="h-4 w-4 theme-primary" />
+                    <span>惩罚记录</span>
                   </Link>
                   <button
                     onClick={() => {

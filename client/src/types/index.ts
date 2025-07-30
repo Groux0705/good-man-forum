@@ -7,6 +7,20 @@ export interface User {
   balance: number;
   level: number;
   experience?: number;
+  status?: string;
+  createdAt: string;
+  punishments?: UserPunishment[];
+}
+
+export interface UserPunishment {
+  id: string;
+  type: string;
+  reason: string;
+  severity: number;
+  startTime: string;
+  endTime?: string;
+  details?: string;
+  status?: 'active' | 'expired' | 'revoked';
   createdAt: string;
 }
 

@@ -256,6 +256,37 @@ const UserProfile: React.FC = () => {
                   </div>
                 )}
 
+                {/* 惩罚状态显示 */}
+                {user.punishments && user.punishments.length > 0 && (
+                  <div className="mb-4">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h3 className="text-red-800 font-semibold mb-2">账户状态</h3>
+                      {user.punishments.map((punishment) => (
+                        <div key={punishment.id} className="text-red-700 text-sm space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">
+                              {punishment.type === 'ban' && '🚫 已封禁'}
+                              {punishment.type === 'mute' && '🔇 已禁言'}
+                              {punishment.type === 'suspend' && '⏸️ 已暂停'}
+                              {punishment.type === 'warning' && '⚠️ 警告'}
+                            </span>
+                            <span className="text-xs bg-red-200 px-2 py-1 rounded">
+                              等级 {punishment.severity}
+                            </span>
+                          </div>
+                          <div>原因：{punishment.reason}</div>
+                          <div>
+                            {punishment.endTime 
+                              ? `结束时间：${new Date(punishment.endTime).toLocaleString()}`
+                              : '永久生效'
+                            }
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* 统计信息 */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {!levelInfo && (

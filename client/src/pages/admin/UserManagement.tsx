@@ -7,16 +7,9 @@ import {
   Ban,
   MessageSquare,
   AlertTriangle,
-  Clock,
   Shield,
   CheckCircle,
-  XCircle,
-  MoreHorizontal,
-  Calendar,
-  TrendingDown,
-  TrendingUp,
-  UserCheck,
-  UserX,
+  Undo2,
   Download
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -24,6 +17,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import BatchOperationStatus from '../../components/admin/BatchOperationStatus';
+import PunishmentLogsModal from '../../components/admin/PunishmentLogsModal';
 
 interface User {
   id: string;
@@ -103,7 +97,6 @@ const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -123,9 +116,13 @@ const UserManagement: React.FC = () => {
   const [showUserDetail, setShowUserDetail] = useState(false);
   const [selectedUserDetail, setSelectedUserDetail] = useState<UserDetail | null>(null);
   const [showPunishModal, setShowPunishModal] = useState(false);
+  const [showPunishmentLogs, setShowPunishmentLogs] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showBatchStatus, setShowBatchStatus] = useState(false);
   const [currentBatchOperationId, setCurrentBatchOperationId] = useState<string | null>(null);
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [selectedPunishment, setSelectedPunishment] = useState<any>(null);
+  const [revokeReason, setRevokeReason] = useState('');
   const [punishmentForm, setPunishmentForm] = useState({
     type: 'warning',
     reason: '',
@@ -181,7 +178,7 @@ const UserManagement: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      setStatsLoading(true);
+      setLoading(true);
       const token = localStorage.getItem('token');
       const response = await fetch('/api/admin/users/stats', {
         headers: {
@@ -196,7 +193,7 @@ const UserManagement: React.FC = () => {
     } catch (error) {
       console.error('获取用户统计失败:', error);
     } finally {
-      setStatsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -252,6 +249,42 @@ const UserManagement: React.FC = () => {
     } catch (error) {
       console.error('处罚用户失败:', error);
       alert('处罚失败');
+    }
+  };
+
+  const handleRevokePunishment = async () => {
+    if (!selectedPunishment) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/punishments/${selectedPunishment.id}/revoke`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reason: revokeReason
+        })
+      });
+
+      if (response.ok) {
+        alert('惩罚已撤销');
+        setShowRevokeModal(false);
+        setSelectedPunishment(null);
+        setRevokeReason('');
+        // 刷新用户详情
+        if (selectedUserDetail) {
+          fetchUserDetail(selectedUserDetail.id);
+        }
+        fetchUsers();
+      } else {
+        const error = await response.json();
+        alert(error.message || '撤销失败');
+      }
+    } catch (error) {
+      console.error('撤销惩罚失败:', error);
+      alert('撤销失败');
     }
   };
 
@@ -339,15 +372,6 @@ const UserManagement: React.FC = () => {
     );
   };
 
-  const getRiskBadge = (trustScore: number) => {
-    if (trustScore >= 80) {
-      return <Badge variant="default" className="bg-green-100 text-green-800">低风险</Badge>;
-    } else if (trustScore >= 60) {
-      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">中等风险</Badge>;
-    } else {
-      return <Badge variant="destructive" className="bg-red-100 text-red-800">高风险</Badge>;
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('zh-CN');
@@ -386,6 +410,13 @@ const UserManagement: React.FC = () => {
           >
             <Filter className="h-4 w-4 mr-2" />
             高级筛选
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowPunishmentLogs(true)}
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            惩罚日志
           </Button>
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
@@ -663,13 +694,13 @@ const UserManagement: React.FC = () => {
                               {user.username}
                             </span>
                             {user.role === 'admin' && (
-                              <Shield className="h-4 w-4 text-red-500" title="管理员" />
+                              <Shield className="h-4 w-4 text-red-500" />
                             )}
                             {user.role === 'moderator' && (
-                              <Shield className="h-4 w-4 text-blue-500" title="版主" />
+                              <Shield className="h-4 w-4 text-blue-500" />
                             )}
                             {user.emailVerified && (
-                              <CheckCircle className="h-4 w-4 text-green-500" title="邮箱已验证" />
+                              <CheckCircle className="h-4 w-4 text-green-500" />
                             )}
                           </div>
                           <p className="text-sm text-gray-500">{user.email}</p>
@@ -976,6 +1007,20 @@ const UserManagement: React.FC = () => {
                                 {punishment.endTime && ` - ${formatDate(punishment.endTime)}`}
                               </p>
                             </div>
+                            {punishment.status === 'active' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedPunishment(punishment);
+                                  setShowRevokeModal(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <Undo2 className="h-4 w-4 mr-1" />
+                                撤销
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1143,6 +1188,74 @@ const UserManagement: React.FC = () => {
             setCurrentBatchOperationId(null);
           }}
         />
+      )}
+
+      {/* 惩罚日志模态框 */}
+      {showPunishmentLogs && (
+        <PunishmentLogsModal
+          isOpen={showPunishmentLogs}
+          onClose={() => setShowPunishmentLogs(false)}
+        />
+      )}
+
+      {/* 撤销惩罚模态框 */}
+      {showRevokeModal && selectedPunishment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">撤销惩罚</h3>
+            
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Badge variant={selectedPunishment.status === 'active' ? 'destructive' : 'secondary'}>
+                  {selectedPunishment.type === 'ban' ? '封禁' : 
+                   selectedPunishment.type === 'mute' ? '禁言' : 
+                   selectedPunishment.type === 'warning' ? '警告' : selectedPunishment.type}
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  严重程度: {selectedPunishment.severity}
+                </span>
+              </div>
+              <p className="text-sm">{selectedPunishment.reason}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDate(selectedPunishment.createdAt)}
+                {selectedPunishment.endTime && ` - ${formatDate(selectedPunishment.endTime)}`}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">撤销原因</label>
+              <textarea
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                rows={3}
+                placeholder="请输入撤销原因（可选）"
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <Button
+                onClick={handleRevokePunishment}
+                className="flex-1"
+                variant="destructive"
+              >
+                <Undo2 className="h-4 w-4 mr-2" />
+                确认撤销
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowRevokeModal(false);
+                  setSelectedPunishment(null);
+                  setRevokeReason('');
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                取消
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

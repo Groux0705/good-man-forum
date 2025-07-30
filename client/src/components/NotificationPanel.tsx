@@ -145,6 +145,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
         return <BookOpen className="h-4 w-4 text-green-500" />;
       case 'mention':
         return <UserPlus className="h-4 w-4 text-purple-500" />;
+      case 'punishment':
+        return <span className="text-red-500">🚫</span>;
+      case 'punishment_revoked':
+        return <span className="text-green-500">✅</span>;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
