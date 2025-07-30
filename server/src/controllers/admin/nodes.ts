@@ -195,7 +195,7 @@ export const getNodeDetail = async (req: AuthenticatedRequest, res: Response) =>
 // 创建节点
 export const createNode = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { name, title, description, avatar, header } = req.body;
+    const { name, title, description, avatar, header, isActive = true, sort = 0 } = req.body;
 
     if (!name || !title) {
       return res.status(400).json({
@@ -222,7 +222,9 @@ export const createNode = async (req: AuthenticatedRequest, res: Response) => {
         title,
         description,
         avatar,
-        header
+        header,
+        isActive,
+        sort
       }
     });
 
@@ -258,7 +260,7 @@ export const createNode = async (req: AuthenticatedRequest, res: Response) => {
 export const updateNode = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, title, description, avatar, header } = req.body;
+    const { name, title, description, avatar, header, isActive, sort } = req.body;
 
     const existingNode = await prisma.node.findUnique({
       where: { id }
@@ -292,7 +294,9 @@ export const updateNode = async (req: AuthenticatedRequest, res: Response) => {
         ...(title && { title }),
         ...(description !== undefined && { description }),
         ...(avatar !== undefined && { avatar }),
-        ...(header !== undefined && { header })
+        ...(header !== undefined && { header }),
+        ...(isActive !== undefined && { isActive }),
+        ...(sort !== undefined && { sort })
       }
     });
 
@@ -567,6 +571,127 @@ export const getNodeStats = async (req: AuthenticatedRequest, res: Response) => 
     res.status(500).json({
       success: false,
       message: '获取节点统计失败'
+    });
+  }
+};
+
+// 批量操作节点
+export const batchUpdateNodes = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { ids, action, isActive } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请选择要操作的节点'
+      });
+    }
+
+    if (!action || !['updateStatus', 'delete'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: '无效的操作类型'
+      });
+    }
+
+    let result;
+    let message;
+
+    if (action === 'updateStatus') {
+      if (isActive === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: '请指定节点状态'
+        });
+      }
+
+      result = await prisma.node.updateMany({
+        where: {
+          id: {
+            in: ids
+          }
+        },
+        data: {
+          isActive: isActive
+        }
+      });
+
+      // 记录管理员操作日志
+      await logAdminAction(
+        req.user!.id,
+        'BATCH_UPDATE_NODE_STATUS',
+        'node',
+        undefined,
+        {
+          nodeIds: ids,
+          isActive,
+          count: result.count
+        },
+        req
+      );
+
+      message = `成功${isActive ? '激活' : '停用'}了 ${result.count} 个节点`;
+    } else if (action === 'delete') {
+      // 检查节点是否有主题
+      const nodesWithTopics = await prisma.node.findMany({
+        where: {
+          id: { in: ids },
+          topics: { gt: 0 }
+        },
+        select: {
+          id: true,
+          name: true,
+          title: true,
+          topics: true
+        }
+      });
+
+      if (nodesWithTopics.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `以下节点包含主题，无法删除: ${nodesWithTopics.map(n => n.title).join(', ')}`,
+          data: {
+            nodesWithTopics
+          }
+        });
+      }
+
+      result = await prisma.node.deleteMany({
+        where: {
+          id: {
+            in: ids
+          }
+        }
+      });
+
+      // 记录管理员操作日志
+      await logAdminAction(
+        req.user!.id,
+        'BATCH_DELETE_NODES',
+        'node',
+        undefined,
+        {
+          nodeIds: ids,
+          count: result.count
+        },
+        req
+      );
+
+      message = `成功删除了 ${result.count} 个节点`;
+    }
+
+    res.json({
+      success: true,
+      message,
+      data: {
+        affected: result?.count || 0
+      }
+    });
+  } catch (error) {
+    console.error('批量操作节点失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '批量操作失败'
     });
   }
 };

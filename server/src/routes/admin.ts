@@ -49,6 +49,7 @@ router.get('/nodes/:id', nodesController.getNodeDetail);
 router.post('/nodes', nodesController.createNode);
 router.put('/nodes/:id', nodesController.updateNode);
 router.delete('/nodes/:id', nodesController.deleteNode);
+router.post('/nodes/batch', nodesController.batchUpdateNodes);
 
 // 举报管理路由
 router.get('/reports', reportsController.getReports);

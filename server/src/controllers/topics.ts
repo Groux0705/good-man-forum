@@ -10,7 +10,12 @@ export const getTopics = async (req: Request, res: Response) => {
     const { page = 1, limit = 20, node, search } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    let where: any = {};
+    let where: any = {
+      status: 'published', // 只显示已发布的主题
+      node: {
+        isActive: true // 只显示激活节点下的主题
+      }
+    };
     
     if (node) {
       const nodeParam = String(node);
@@ -121,6 +126,10 @@ export const searchTopics = async (req: Request, res: Response) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     const where = {
+      status: 'published', // 只搜索已发布的主题
+      node: {
+        isActive: true // 只搜索激活节点下的主题
+      },
       OR: [
         {
           title: {
@@ -181,8 +190,14 @@ export const getTopic = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const topic = await prisma.topic.findUnique({
-      where: { id },
+    const topic = await prisma.topic.findFirst({
+      where: { 
+        id,
+        status: 'published', // 只允许访问已发布的主题
+        node: {
+          isActive: true // 只允许访问激活节点下的主题
+        }
+      },
       include: {
         user: {
           select: { id: true, username: true, avatar: true, level: true }
@@ -254,11 +269,16 @@ export const createTopic = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const node = await prisma.node.findUnique({ where: { id: nodeId } });
+    const node = await prisma.node.findFirst({ 
+      where: { 
+        id: nodeId,
+        isActive: true // 只允许在激活的节点中创建主题
+      } 
+    });
     if (!node) {
       return res.status(404).json({
         success: false,
-        error: 'Node not found'
+        error: 'Node not found or inactive'
       });
     }
 
@@ -477,9 +497,15 @@ export const voteTopic = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // 检查主题是否存在
-    const topic = await prisma.topic.findUnique({
-      where: { id },
+    // 检查主题是否存在且已发布
+    const topic = await prisma.topic.findFirst({
+      where: { 
+        id,
+        status: 'published', // 只允许对已发布的主题投票
+        node: {
+          isActive: true // 只允许对激活节点下的主题投票
+        }
+      },
       include: {
         user: {
           select: { id: true, username: true }
@@ -585,9 +611,15 @@ export const getTopicVotes = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // 检查主题是否存在
-    const topic = await prisma.topic.findUnique({
-      where: { id }
+    // 检查主题是否存在且已发布
+    const topic = await prisma.topic.findFirst({
+      where: { 
+        id,
+        status: 'published', // 只允许查看已发布主题的投票统计
+        node: {
+          isActive: true // 只允许查看激活节点下主题的投票统计
+        }
+      }
     });
 
     if (!topic) {

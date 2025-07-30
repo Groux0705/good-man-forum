@@ -66,7 +66,10 @@ model Node {
   avatar      String?
   header      String?
   topics      Int      @default(0)  // 主题数量
+  isActive    Boolean  @default(true) // 节点状态：激活/停用
+  sort        Int      @default(0)    // 排序权重
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
 
   topicList   Topic[]
 

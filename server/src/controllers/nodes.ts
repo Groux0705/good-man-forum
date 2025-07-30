@@ -6,7 +6,13 @@ const prisma = new PrismaClient();
 export const getNodes = async (req: Request, res: Response) => {
   try {
     const nodes = await prisma.node.findMany({
-      orderBy: { createdAt: 'asc' }
+      where: {
+        isActive: true // 只显示激活的节点
+      },
+      orderBy: [
+        { sort: 'asc' }, // 按排序权重升序
+        { createdAt: 'asc' }
+      ]
     });
 
     res.json({
@@ -26,12 +32,17 @@ export const getNode = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    // 支持按ID或名称查找节点
+    // 支持按ID或名称查找节点，但只查找激活的节点
     const node = await prisma.node.findFirst({
       where: {
-        OR: [
-          { id: id },
-          { name: id }
+        AND: [
+          {
+            OR: [
+              { id: id },
+              { name: id }
+            ]
+          },
+          { isActive: true } // 只允许访问激活的节点
         ]
       },
       include: {

@@ -17,11 +17,19 @@ export const createReply = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const topic = await prisma.topic.findUnique({ where: { id: topicId } });
+    const topic = await prisma.topic.findFirst({ 
+      where: { 
+        id: topicId,
+        status: 'published',
+        node: {
+          isActive: true // 只允许在激活节点下的主题中回复
+        }
+      }
+    });
     if (!topic) {
       return res.status(404).json({
         success: false,
-        error: 'Topic not found'
+        error: 'Topic not found or not accessible'
       });
     }
 

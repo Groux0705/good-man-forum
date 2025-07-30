@@ -19,17 +19,14 @@ interface Node {
   name: string;
   title: string;
   description: string | null;
+  avatar?: string | null;
+  header?: string | null;
+  topics: number;
   sort: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   topicCount: number;
-  parent?: {
-    id: string;
-    name: string;
-    title: string;
-  };
-  children?: Node[];
 }
 
 interface NodeListResponse {
@@ -46,7 +43,8 @@ interface NodeFormData {
   name: string;
   title: string;
   description: string;
-  parentId?: string;
+  avatar?: string;
+  header?: string;
   sort: number;
   isActive: boolean;
 }
@@ -65,6 +63,8 @@ const NodeManagement: React.FC = () => {
     name: '',
     title: '',
     description: '',
+    avatar: '',
+    header: '',
     sort: 0,
     isActive: true
   });
@@ -164,6 +164,8 @@ const NodeManagement: React.FC = () => {
           name: '',
           title: '',
           description: '',
+          avatar: '',
+          header: '',
           sort: 0,
           isActive: true
         });
@@ -212,7 +214,8 @@ const NodeManagement: React.FC = () => {
       name: node.name,
       title: node.title,
       description: node.description || '',
-      parentId: node.parent?.id,
+      avatar: node.avatar || '',
+      header: node.header || '',
       sort: node.sort,
       isActive: node.isActive
     });
@@ -377,11 +380,6 @@ const NodeManagement: React.FC = () => {
                               {node.description}
                             </p>
                           )}
-                          {node.parent && (
-                            <div className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                              父节点: {node.parent.title}
-                            </div>
-                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -392,7 +390,7 @@ const NodeManagement: React.FC = () => {
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                         <div className="flex items-center">
                           <FileText className="h-4 w-4 mr-1 text-gray-400" />
-                          <span>{node.topicCount} 主题</span>
+                          <span>{node.topicCount || node.topics || 0} 主题</span>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           排序: {node.sort}
@@ -512,6 +510,32 @@ const NodeManagement: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  头像 URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.avatar}
+                  onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="https://example.com/avatar.jpg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  头图 URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.header}
+                  onChange={(e) => setFormData({ ...formData, header: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="https://example.com/header.jpg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   排序
                 </label>
                 <input
@@ -546,6 +570,8 @@ const NodeManagement: React.FC = () => {
                       name: '',
                       title: '',
                       description: '',
+                      avatar: '',
+                      header: '',
                       sort: 0,
                       isActive: true
                     });
