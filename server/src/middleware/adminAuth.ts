@@ -9,7 +9,8 @@ interface AuthenticatedRequest extends Request {
     id: string;
     username: string;
     role: string;
-  };
+    status: string;
+  } | any;
 }
 
 // 验证用户是否为管理员

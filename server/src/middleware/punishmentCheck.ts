@@ -9,7 +9,7 @@ interface AuthenticatedRequest extends Request {
     username: string;
     role: string;
     status: string;
-  };
+  } | any;
 }
 
 // 检查用户是否被封禁

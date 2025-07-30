@@ -9,7 +9,7 @@ export interface AuthRequest extends Request {
     id: string;
     username: string;
     email: string;
-  };
+  } | any;
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
